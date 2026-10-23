@@ -3,14 +3,14 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: [Resources/Info.plist]
+    paths: [Resources/Info.plist, .github/workflows/release.yml]
 permissions:
   contents: write
 jobs:
   release:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build Apple Silicon app
         run: bash Scripts/build-app.sh
       - name: Package and publish

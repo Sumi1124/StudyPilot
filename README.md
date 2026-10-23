@@ -1,8 +1,8 @@
 # StudyPilot
 
-A native, offline student workspace for Apple Silicon Macs running macOS 14 or later. Built with Swift 6, SwiftUI, SwiftData, Charts, and UserNotifications. No account, network connection, paid API, or third-party dependency is required.
+A native, offline student workspace for Apple Silicon Macs running macOS 14 or later. Built with Swift 6, SwiftUI, SwiftData, Charts, and UserNotifications. Core study features work offline without an account or paid API. Optional in-app updates use the Sparkle framework and an internet connection.
 
-**Version 1.2 adds note-to-flashcard creation, bulk assignment updates, assignment focus shortcuts, and an adjustable daily study goal.** Google Calendar study planning remains available. This optional connection uses Google calendars synced through macOS Calendar. Automatic scheduling works locally; AI time estimates and study steps use Apple Intelligence on supported Macs with macOS 26+. Google synchronization requires your Google account and connectivity.
+**Version 1.3 adds native signed in-app updates through Settings and the StudyPilot menu.** Version 1.2 added note-to-flashcard creation, bulk assignment updates, assignment focus shortcuts, and an adjustable daily study goal. Google Calendar study planning remains available. This optional connection uses Google calendars synced through macOS Calendar. Automatic scheduling works locally; AI time estimates and study steps use Apple Intelligence on supported Macs with macOS 26+. Google synchronization requires your Google account and connectivity.
 
 ## Run the application
 
@@ -16,7 +16,7 @@ The first launch creates a real SQLite-backed SwiftData database and five editab
 
 1. Install Xcode 16 or newer (Swift 6 and the macOS SDK).
 2. Open `StudyPilot.xcodeproj` and select the **StudyPilot** scheme and **My Mac**.
-3. Press **⌘R**. The project references its two local Swift package libraries; it downloads no dependencies.
+3. Press **⌘R**. The project references its two local Swift package libraries; it downloads the Sparkle updater dependency.
 
 The target uses an ad-hoc signing identity for local development, without a team. Choose your own signing team and identity for distribution. The provided entitlements file is an optional starting point for a sandboxed distribution; the default local build is not sandboxed.
 
@@ -102,3 +102,7 @@ See `ARCHITECTURE.md` for the data model and scheduling rules, `PROGRESS.md` for
 - **Assignments → Select assignments:** select visible tasks and update their status together or postpone them one calendar day. Deadline time and reminder lead time are preserved; filtering removes hidden items from the selection.
 - **Assignment timer menu:** start a 25- or 50-minute session attributed to the assignment's subject. An existing timer is opened rather than replaced. Focus history remains subject-based.
 - **Focus → Daily goal:** choose a goal from 15 to 480 minutes. Overview and Focus show progress from saved sessions for the current day. The default is an editable 60 minutes. Running sessions count once saved; breaks do not count. This preference stays on this Mac and is not part of JSON exports.
+
+## App updates
+
+Install 1.3.0 once to enable **Settings → App updates → Check for Updates**. Future signed releases download and install through the app’s native update window. See `UPDATES.md` for publishing and signing instructions.

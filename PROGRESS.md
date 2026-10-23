@@ -53,3 +53,7 @@ Implemented offline note-to-flashcard drafts with editable previews, existing/ne
 Validation: 44 core/data tests passed, including local-day goal calculation, note parsing, selection isolation, completion history and daylight-saving reminder preservation.
 
 Release compilation succeeded for version 1.2; new screen interactions still need a manual UI walkthrough.
+
+## Version 1.3 — GitHub and native updates
+
+Source uploaded to Sumi1124/StudyPilot. Integrated Sparkle 2.10.0 with a signed Ed25519 update feed, native Check for Updates controls in Settings and the application menu, and an Apple Silicon GitHub release build workflow. Public verification key embedded; private key kept outside the source tree. Automatic checks are disabled initially. Existing focus sessions must finish before a check can start.
