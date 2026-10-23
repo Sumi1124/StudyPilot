@@ -1,0 +1,27 @@
+name: Build macOS release
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [Resources/Info.plist]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Apple Silicon app
+        run: bash Scripts/build-app.sh
+      - name: Package and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)
+          TAG="v$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release already exists; refusing to replace its signed archive."
+            exit 0
+          fi
+          ditto -c -k --sequesterRsrc --keepParent dist/StudyPilot.app StudyPilot-macOS.zip
+          gh release create "$TAG" StudyPilot-macOS.zip --target "$GITHUB_SHA" --title "StudyPilot $VERSION" --generate-notes

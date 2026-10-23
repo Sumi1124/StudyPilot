@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>StudyPilot</string>
+	<key>CFBundleExecutable</key>
+	<string>StudyPilot</string>
+	<key>CFBundleIconFile</key>
+	<string>StudyPilot</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.studypilot.app</string>
+	<key>CFBundleName</key>
+	<string>StudyPilot</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.3.0</string>
+	<key>CFBundleVersion</key>
+	<string>4</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>StudyPilot reads your selected calendars to find assignment deadlines and free time, and adds study blocks only when you choose Add to calendar.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>StudyPilot — Your student workspace</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/Sumi1124/StudyPilot/main/updates/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>I0GKesq/+y3o2kvmW+ewywoskStz9X/ey75zpwf5Uns=</string>
+	<key>SUShowReleaseNotes</key>
+	<false/>
+</dict>
+</plist>

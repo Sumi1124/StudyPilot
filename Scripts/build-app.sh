@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+STUDYPILOT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+STUDYPILOT_BUILD="${STUDYPILOT_BUILD_DIR:-$STUDYPILOT_ROOT/.build-local}"
+STUDYPILOT_DESTINATION="${1:-$STUDYPILOT_ROOT/dist}"
+mkdir -p "$STUDYPILOT_BUILD" "$STUDYPILOT_DESTINATION"
+export CLANG_MODULE_CACHE_PATH="$STUDYPILOT_BUILD/ModuleCache"
+export SWIFTPM_MODULECACHE_OVERRIDE="$CLANG_MODULE_CACHE_PATH"
+STUDYPILOT_ARGS=(--package-path "$STUDYPILOT_ROOT" --scratch-path "$STUDYPILOT_BUILD/build" --cache-path "$STUDYPILOT_BUILD/cache" --config-path "$STUDYPILOT_BUILD/config" --security-path "$STUDYPILOT_BUILD/security" --disable-sandbox --configuration release --arch arm64 --product StudyPilot)
+swift build "${STUDYPILOT_ARGS[@]}"
+STUDYPILOT_BIN="$(swift build "${STUDYPILOT_ARGS[@]}" --show-bin-path)"
+STUDYPILOT_APP="$STUDYPILOT_DESTINATION/StudyPilot.app"
+mkdir -p "$STUDYPILOT_APP/Contents/MacOS" "$STUDYPILOT_APP/Contents/Resources"
+cp "$STUDYPILOT_BIN/StudyPilot" "$STUDYPILOT_APP/Contents/MacOS/StudyPilot"
+cp "$STUDYPILOT_ROOT/Resources/Info.plist" "$STUDYPILOT_APP/Contents/Info.plist"
+cp "$STUDYPILOT_ROOT/Resources/StudyPilot.icns" "$STUDYPILOT_APP/Contents/Resources/StudyPilot.icns"
+cp "$STUDYPILOT_ROOT/Resources/PrivacyInfo.xcprivacy" "$STUDYPILOT_APP/Contents/Resources/PrivacyInfo.xcprivacy"
+STUDYPILOT_FRAMEWORK="$STUDYPILOT_BUILD/build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
+mkdir -p "$STUDYPILOT_APP/Contents/Frameworks"
+ditto "$STUDYPILOT_FRAMEWORK" "$STUDYPILOT_APP/Contents/Frameworks/Sparkle.framework"
+codesign --force --sign - --identifier com.studypilot.app "$STUDYPILOT_APP"
+printf 'Built %s\n' "$STUDYPILOT_APP"
