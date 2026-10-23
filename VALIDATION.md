@@ -91,3 +91,7 @@ Build caches default to `.build-local/`; set `STUDYPILOT_BUILD_DIR` to use anoth
 ## Version 1.3 — updater validation
 
 44 core/data tests passed locally. Local release compilation passed. GitHub Actions built the complete Apple Silicon app on macOS 26 and published v1.3.0. Downloaded the exact release asset, matched its SHA-256 with GitHub’s digest, signed and verified the archive using Sparkle’s Ed25519 tool, and confirmed the release embeds the matching public key and Sparkle framework. The local isolated GUI launch could not be completed in this environment; a full update-install/relaunch cycle has not been exercised.
+
+## Version 1.3.1
+
+The complete local macOS release build passed. The bundle and Xcode project validation passed. Confirmed build 5 sorts above 1.3.0 build 4, with identical embedded public verification key and feed URL. The user’s local 1.3.0 app remains in place for an actual in-app upgrade test. This release adds UI controls using the existing persisted appearance setting; no data schema changes.

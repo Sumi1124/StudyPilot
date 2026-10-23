@@ -7,3 +7,7 @@ The appcast is hosted at `https://raw.githubusercontent.com/Sumi1124/StudyPilot/
 To release an update: increment both bundle version fields, push the source, let the GitHub release workflow build the Apple Silicon archive, then download that exact release archive and run Sparkle’s `bin/sign_update --ed-key-file /secure/path/to/key StudyPilot-macOS.zip`. Alternatively run `python3 Scripts/sign-release.py /path/to/release.zip /secure/path/to/private.key` to verify the signature and generate the feed. Add the returned signature and length to the feed alongside the new version and release URL. Commit the feed only after signing and verifying the archive. Do not modify a published archive. Public release builds are ad-hoc signed; Developer ID signing and notarization remain necessary for trusted broad distribution.
 
 Install version 1.3.0 manually once to gain the updater. Versions before 1.3 have no updater. The feed’s initial item points to the installed version, so checks should report that it is current until a newer signed version is released.
+
+## Testing 1.3.0 → 1.3.1
+
+Open the existing 1.3.0 app. In Settings → App updates, choose Check for Updates, then follow the native Download/Install and Relaunch prompts. After relaunch, Settings should show 1.3.1 and the main toolbar should have a sun/moon Appearance menu. Light and Dark apply immediately and persist after reopening. Finish any active focus timer before checking for updates.
