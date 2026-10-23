@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  <channel>
+    <title>StudyPilot updates</title>
+    <item>
+      <title>StudyPilot 1.3.0</title>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/Sumi1124/StudyPilot/releases/download/v1.3.0/StudyPilot-macOS.zip" length="3403826" type="application/octet-stream" sparkle:version="4" sparkle:shortVersionString="1.3.0" sparkle:edSignature="ubLpg2S04cJsHPmqez/K/3oZrnLbXo76cymaaW2R+Q/2XLJKI2Dbe7P9n7SxdsggNWgb1ckYYrZ/MGINrNeRBA==" />
+    </item>
+  </channel>
+</rss>
