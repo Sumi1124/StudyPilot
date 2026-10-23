@@ -103,3 +103,5 @@ System logs confirmed `App termination blocked by modal sheet`. The downloaded a
 ## Version 1.3.3 — native UI regression test
 
 Local release compilation passed. Launched a separate QA bundle using a separate data directory and preference domain. Opened Settings and clicked Check for Updates: Settings dismissed, the native Sparkle “You’re up to date” result appeared, and dismissing it returned to the enabled workspace. The QA copy was then quit. This caught and corrected the early onDismiss guard failure in 1.3.2 before publishing 1.3.3. The real app also completed installation/relaunch from 1.3.1 to 1.3.2, preserving its existing workspace.
+
+Final production verification: the installed main app detected 1.3.3, downloaded it, completed Install and Relaunch, and reopened on its existing workspace. Settings showed 1.3.3. Clicking Check for Updates from Settings dismissed the sheet and displayed Sparkle’s “You’re up to date! StudyPilot 1.3.3” result. Dismissing that result returned to an enabled overview with the saved assignments still visible. All 44 automated tests passed. GitHub’s feed cache briefly served 1.3.2 before propagating the new feed.
