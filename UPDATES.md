@@ -15,3 +15,5 @@ Open the existing 1.3.0 app. In Settings → App updates, choose Check for Updat
 ## Settings sheet fix (1.3.2)
 
 AppKit can refuse termination while a SwiftUI sheet remains attached. In versions 1.3.0–1.3.1, close Settings with Done before Install and Relaunch. Version 1.3.2 dismisses Settings before starting Sparkle and prevents opening new workspace sheets during the update session. Other open editors are preserved and must be closed first.
+
+Version 1.3.3 also waits for AppKit’s sheet animation to finish; 1.3.2 could show a close-editor message too early. Use the application-menu Check for Updates with Settings closed when updating from 1.3.2.

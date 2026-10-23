@@ -99,3 +99,7 @@ The complete local macOS release build passed. The bundle and Xcode project vali
 ## Version 1.3.2 — reproduced relaunch blockage
 
 System logs confirmed `App termination blocked by modal sheet`. The downloaded archive’s EdDSA verification had succeeded. Using the live UI, closed Settings, brought Updating StudyPilot to the front, pressed Install and Relaunch, and confirmed the app restarted at 1.3.1 with the Appearance toolbar control. Local compilation passed for the 1.3.2 Settings-dismissal fix.
+
+## Version 1.3.3 — native UI regression test
+
+Local release compilation passed. Launched a separate QA bundle using a separate data directory and preference domain. Opened Settings and clicked Check for Updates: Settings dismissed, the native Sparkle “You’re up to date” result appeared, and dismissing it returned to the enabled workspace. The QA copy was then quit. This caught and corrected the early onDismiss guard failure in 1.3.2 before publishing 1.3.3. The real app also completed installation/relaunch from 1.3.1 to 1.3.2, preserving its existing workspace.

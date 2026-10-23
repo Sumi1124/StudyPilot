@@ -40,19 +40,19 @@ import StudyPilotData
             .commands {
                 CommandGroup(after: .appInfo) { AppUpdateButton().environment(focus).environment(app) }
                 CommandGroup(replacing: .newItem) {
-                    Button("New Assignment") { app.showingAssignment = true }.keyboardShortcut("n").disabled(updater.sessionInProgress)
-                    Button("New Note") { app.section = .notes; app.createNote = true }.keyboardShortcut("n", modifiers: [.command, .shift]).disabled(updater.sessionInProgress)
+                    Button("New Assignment") { app.showingAssignment = true }.keyboardShortcut("n").disabled(updater.isBusy)
+                    Button("New Note") { app.section = .notes; app.createNote = true }.keyboardShortcut("n", modifiers: [.command, .shift]).disabled(updater.isBusy)
                 }
                 CommandMenu("Workspace") {
-                    Button("Search & Quick Actions") { app.showingSearch = true }.keyboardShortcut("k").disabled(updater.sessionInProgress)
-                    Button("Plan My Study") { app.showingStudyPlanner = true }.keyboardShortcut("p", modifiers: [.command, .shift]).disabled(updater.sessionInProgress)
-                    Button("Focus Session") { app.section = .focus; if focus.state == nil { focus.start(minutes: 25, subjectID: nil) } }.keyboardShortcut("f", modifiers: [.command, .shift]).disabled(updater.sessionInProgress)
+                    Button("Search & Quick Actions") { app.showingSearch = true }.keyboardShortcut("k").disabled(updater.isBusy)
+                    Button("Plan My Study") { app.showingStudyPlanner = true }.keyboardShortcut("p", modifiers: [.command, .shift]).disabled(updater.isBusy)
+                    Button("Focus Session") { app.section = .focus; if focus.state == nil { focus.start(minutes: 25, subjectID: nil) } }.keyboardShortcut("f", modifiers: [.command, .shift]).disabled(updater.isBusy)
                     Divider()
                     ForEach(Array(AppSection.allCases.enumerated()), id: \.element.id) { index, section in
-                        Button(section.rawValue) { app.section = section }.keyboardShortcut(KeyEquivalent(Character(String(index + 1)))).disabled(updater.sessionInProgress)
+                        Button(section.rawValue) { app.section = section }.keyboardShortcut(KeyEquivalent(Character(String(index + 1)))).disabled(updater.isBusy)
                     }
                 }
-                CommandGroup(replacing: .appSettings) { Button("Settings…") { app.showingSettings = true }.keyboardShortcut(",").disabled(updater.sessionInProgress) }
+                CommandGroup(replacing: .appSettings) { Button("Settings…") { app.showingSettings = true }.keyboardShortcut(",").disabled(updater.isBusy) }
             }
     }
 }
@@ -112,14 +112,16 @@ struct RootView: View {
                         Button { app.showingAssignment = true } label: { Label("New assignment", systemImage: "plus") }.help("New assignment (⌘N)")
                     }
                 }
-        }.disabled(updater.sessionInProgress)
+        }.disabled(updater.isBusy)
             .frame(minWidth: 960, minHeight: 700)
             .sheet(isPresented: $app.showingAssignment) { AssignmentEditor() }
             .sheet(isPresented: $app.showingSearch) { CommandPalette() }
             .sheet(isPresented: $app.showingSettings, onDismiss: {
                 guard app.checkForUpdatesAfterSettings else { return }
                 app.checkForUpdatesAfterSettings = false
-                if let error = updater.check() { app.error = error }
+                Task { @MainActor in
+                    if let error = await updater.checkAfterSettingsCloses() { app.error = error }
+                }
             }) { SettingsView() }
             .sheet(isPresented: $app.showingStudyPlanner) { StudyPlanningView() }
             .alert("Something needs attention", isPresented: Binding(get: { app.error != nil }, set: { if !$0 { app.error = nil } })) { Button("OK") { app.error = nil } } message: { Text(app.error ?? "") }

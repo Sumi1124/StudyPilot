@@ -114,3 +114,5 @@ Use the sun/moon Appearance menu in the main toolbar to choose Light mode, Dark 
 ## Version 1.3.2 updater fix
 
 Check for Updates now closes Settings first, preventing the Settings sheet from blocking Install and Relaunch. If an editor is open, save or cancel it before checking. During an update, workspace actions are temporarily unavailable. In 1.3.0 or 1.3.1, close Settings before pressing Install and Relaunch if the update appears stuck.
+
+Version 1.3.3 completes the updater fix by waiting for the Settings animation to finish. The Settings button has been checked in the native UI and now hands off to the updater without leaving a blocking sheet.

@@ -65,3 +65,7 @@ Added a visible toolbar Appearance menu for Light, Dark, and System modes, plus 
 ## Version 1.3.2 — updater relaunch fix
 
 Reproduced an in-app update blocked by the open Settings sheet. Update requests from Settings now wait for the sheet’s onDismiss callback before starting Sparkle. Update requests made with another open editor show a useful close-editor message; drafts are not discarded. Workspace controls and shortcuts are disabled while an update session is active so a new sheet cannot block installation. Closing the sheet in the existing 1.3.0 app allowed the original signed 1.3.1 update to install and relaunch successfully.
+
+## Version 1.3.3 — verified sheet handoff
+
+Native testing revealed that SwiftUI’s onDismiss can fire before the AppKit sheet fully detaches. The updater now waits for the actual visible-sheet state with a four-second timeout and a clear recovery message, instead of immediately rejecting the check. An isolated native test confirmed Settings closes, Sparkle reports the version result, and the workspace re-enables after dismissal. A real 1.3.1 → 1.3.2 install/relaunch also completed successfully with Settings closed.

@@ -6,15 +6,35 @@ import Sparkle
     static let shared = AppUpdater()
     @Published var canCheck = false
     @Published var sessionInProgress = false
+    @Published private(set) var preparingCheck = false
+    var isBusy: Bool { sessionInProgress || preparingCheck }
     private let controller: SPUStandardUpdaterController
     private init() {
         controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
         controller.updater.publisher(for: \.canCheckForUpdates).receive(on: RunLoop.main).assign(to: &$canCheck)
         controller.updater.publisher(for: \.sessionInProgress).receive(on: RunLoop.main).assign(to: &$sessionInProgress)
     }
+    private var hasBlockingSheet: Bool {
+        NSApp.modalWindow?.isVisible == true || NSApp.windows.contains {
+            $0.isVisible && $0.attachedSheet?.isVisible == true
+        }
+    }
+    func checkAfterSettingsCloses() async -> String? {
+        guard !preparingCheck else { return nil }
+        preparingCheck = true
+        defer { preparingCheck = false }
+        // SwiftUI's onDismiss can precede AppKit detaching the animated sheet.
+        // Wait for the actual window state, with a finite timeout and no forced close.
+        for _ in 0..<40 {
+            if !hasBlockingSheet { return check() }
+            do { try await Task.sleep(for: .milliseconds(100)) }
+            catch { return nil }
+        }
+        return "The dialog is still closing. Please try Check for Updates again from the StudyPilot menu."
+    }
     @discardableResult func check() -> String? {
         guard controller.updater.canCheckForUpdates else { return nil }
-        guard NSApp.modalWindow == nil, !NSApp.windows.contains(where: { $0.attachedSheet != nil }) else {
+        guard !hasBlockingSheet else {
             return "Close the open editor or dialog before checking for updates. Your draft has been kept open."
         }
         controller.checkForUpdates(nil)
@@ -36,6 +56,6 @@ struct AppUpdateButton: View {
                 app.error = error
             }
         }
-            .disabled(!updater.canCheck || focus.state != nil)
+            .disabled(!updater.canCheck || updater.preparingCheck || focus.state != nil)
     }
 }
