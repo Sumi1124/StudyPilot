@@ -109,3 +109,5 @@ Final production verification: the installed main app detected 1.3.3, downloaded
 ## Version 1.3.4
 
 Local release compilation and app signature verification passed. Confirmed build 8 is newer than installed 1.3.3 build 7 and uses the same update-verification key. Copy Markdown copies the current note’s exact source as plain text and shows transient confirmation. The user’s running 1.3.3 app is deliberately not updated: the user will exercise the in-app upgrade and new button.
+
+GitHub’s 1.3.4 release build also succeeded. Downloaded that exact archive, matched its SHA-256 to GitHub’s digest, verified the app bundle signature, and verified Sparkle’s update signature with the existing key. The signed feed is published separately; no update was initiated in the user’s app.
