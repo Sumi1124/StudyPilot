@@ -106,3 +106,7 @@ See `ARCHITECTURE.md` for the data model and scheduling rules, `PROGRESS.md` for
 ## App updates
 
 Install 1.3.0 once to enable **Settings → App updates → Check for Updates**. Future signed releases download and install through the app’s native update window. See `UPDATES.md` for publishing and signing instructions.
+
+## Version 1.3.1 appearance controls
+
+Use the sun/moon Appearance menu in the main toolbar to choose Light mode, Dark mode, or Follow Mac appearance. The choice applies immediately and stays saved on this Mac. Settings → Appearance offers the same choices. The menu also provides ⇧⌘D to switch between Light and Dark.

@@ -105,6 +105,7 @@ struct RootView: View {
                 .toolbar {
                     ToolbarItem(placement: .navigation) { Text(app.section.rawValue).font(.headline).foregroundStyle(.secondary) }
                     ToolbarItemGroup(placement: .primaryAction) {
+                        AppearanceControl()
                         Button { app.showingSearch = true } label: { Image(systemName: "magnifyingglass") }.help("Search workspace (⌘K)")
                         Button { app.showingAssignment = true } label: { Label("New assignment", systemImage: "plus") }.help("New assignment (⌘N)")
                     }
