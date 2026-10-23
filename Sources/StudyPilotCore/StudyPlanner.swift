@@ -52,13 +52,15 @@ public struct PlannedStudyBlock: Identifiable, Equatable, Sendable {
     public let start: Date
     public let minutes: Int
     public let steps: [String]
+    public let deadline: Date?
     public var end: Date { start.addingTimeInterval(Double(minutes) * 60) }
-    public init(id: UUID = UUID(), taskID: String, title: String, start: Date, minutes: Int, steps: [String] = []) {
-        self.id = id; self.taskID = taskID; self.title = title; self.start = start; self.minutes = minutes; self.steps = steps
+    public init(id: UUID = UUID(), taskID: String, title: String, start: Date, minutes: Int, steps: [String] = [], deadline: Date? = nil) {
+        self.id = id; self.taskID = taskID; self.title = title; self.start = start; self.minutes = minutes; self.steps = steps; self.deadline = deadline
     }
     public var notes: String {
         let encoded = Data(taskID.utf8).base64EncodedString()
-        return "StudyPilot-Task-ID: \(encoded)\n\n" + (steps.isEmpty ? "Work on this assignment, then check your progress." : steps.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n"))
+        let text = "StudyPilot-Task-ID: \(encoded)\n\n" + (steps.isEmpty ? "Work on this assignment, then check your progress." : steps.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n"))
+        return StudyBlockTracking(deadline: deadline).writing(to: text)
     }
     public static func taskID(in notes: String) -> String? {
         guard let first = notes.components(separatedBy: .newlines).first, first.hasPrefix("StudyPilot-Task-ID: "),
@@ -83,7 +85,7 @@ public enum StudyPlanner {
     /// Deadline-first allocation. The clock/calendar are injected for repeatable scheduling tests.
     /// Existing linked future sessions count toward remaining work; past sessions never imply completion.
     public static func makePlan(tasks: [PlanningTask], busy: [PlanningBusyTime], preferences p: PlanningPreferences,
-                                now: Date, calendar: Calendar = .current) throws -> StudyPlan {
+                                now: Date, calendar: Calendar = .current, minimumBlockMinutes: Int? = nil) throws -> StudyPlan {
         try p.validate()
         guard now.timeIntervalSince1970.isFinite, tasks.count <= 500, busy.count <= 20_000,
               Set(tasks.map(\.id)).count == tasks.count,
@@ -129,8 +131,8 @@ public enum StudyPlanner {
                     let nextBusy = occupied.filter { $0.start > cursor }.map(\.start).min() ?? limit
                     let available = max(0, Int(min(limit, nextBusy).timeIntervalSince(cursor) / 60))
                     let duration = min(remaining, p.sessionMinutes, p.dailyMinutes - usedByDay[day, default: 0], available) / 5 * 5
-                    guard duration >= min(15, remaining) else { cursor = roundedUp(min(limit, nextBusy).addingTimeInterval(60)); continue }
-                    let block = PlannedStudyBlock(taskID: task.id, title: task.title, start: cursor, minutes: duration, steps: task.steps)
+                    guard duration >= (minimumBlockMinutes ?? min(15, remaining)) else { cursor = roundedUp(min(limit, nextBusy).addingTimeInterval(60)); continue }
+                    let block = PlannedStudyBlock(taskID: task.id, title: task.title, start: cursor, minutes: duration, steps: task.steps, deadline: task.deadline)
                     result.blocks.append(block)
                     let breakEnd = block.end.addingTimeInterval(Double(p.breakMinutes * 60))
                     occupied.append(PlanningBusyTime(start: block.start, end: breakEnd, taskID: task.id))

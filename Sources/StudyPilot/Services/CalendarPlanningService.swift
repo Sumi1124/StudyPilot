@@ -2,6 +2,8 @@ import Foundation
 import Observation
 @preconcurrency import EventKit
 import StudyPilotCore
+import SwiftData
+import StudyPilotData
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
@@ -16,6 +18,7 @@ struct ConnectedPlanningCalendar: Identifiable {
 
 struct CalendarPlanningEvent: Identifiable, Equatable {
     let id: String
+    let eventIdentifier: String
     let calendarID: String
     let title: String
     let notes: String
@@ -29,6 +32,7 @@ struct CalendarPlanningEvent: Identifiable, Equatable {
 }
 
 struct CalendarPlanningSettings: Codable {
+    var autoReschedule: Bool?
     var preferences = PlanningPreferences()
     var deadlineCalendarIDs: Set<String> = []
     var busyCalendarIDs: Set<String> = []
@@ -49,6 +53,9 @@ struct CalendarPlanningSettings: Codable {
     var status: String?
     var working = false
     var needsRefresh = false
+    var automationMessage: String?
+    private var lastAutomationCheck = Date.distantPast
+    var automaticallyReschedules: Bool { settings.autoReschedule ?? true }
 
     func configure(folder: URL) {
         guard settingsURL == nil else { return }
@@ -117,7 +124,7 @@ struct CalendarPlanningSettings: Codable {
             let id = "calendar:\(event.calendar.calendarIdentifier):\(itemID)\(occurrence)"
             guard seen.insert(id).inserted else { return nil }
             let owned = event.url?.scheme == "studypilot" && event.url?.host == "plan"
-            return CalendarPlanningEvent(id: id, calendarID: event.calendar.calendarIdentifier,
+            return CalendarPlanningEvent(id: id, eventIdentifier: event.eventIdentifier ?? "", calendarID: event.calendar.calendarIdentifier,
                 title: event.title ?? "Untitled calendar event", notes: event.notes ?? "", start: start, end: end,
                 allDay: event.isAllDay, free: event.availability == .free,
                 ownTaskID: owned ? PlannedStudyBlock.taskID(in: event.notes ?? "") : nil, modified: event.lastModifiedDate)
@@ -174,6 +181,92 @@ struct CalendarPlanningSettings: Codable {
         events = (try? readEvents()) ?? events; lastRefresh = Date()
         status = "Added \(plan.blocks.count) study blocks to \(calendar.title). Google sync is handled by macOS Calendar."
     }
+    func setCompleted(_ completed: Bool, local event: PlannerEvent, context: ModelContext) throws {
+        let original = event.details
+        var tracking = StudyBlockTracking.read(original)
+        tracking.completedAt = completed ? Date() : nil
+        event.details = tracking.writing(to: original)
+        do { try context.save() } catch { event.details = original; throw error }
+    }
+    func setCompleted(_ completed: Bool, external snapshot: CalendarPlanningEvent) throws {
+        guard let event = store.event(withIdentifier: snapshot.eventIdentifier),
+              event.notes == snapshot.notes, event.startDate == snapshot.start, event.endDate == snapshot.end,
+              event.calendar.allowsContentModifications, !event.hasRecurrenceRules,
+              event.url?.scheme == "studypilot", event.url?.host == "plan" else {
+            throw PlanningError.invalid("This block changed or is read-only. Refresh your calendars before checking it off.")
+        }
+        var tracking = StudyBlockTracking.read(snapshot.notes)
+        tracking.completedAt = completed ? Date() : nil
+        event.notes = tracking.writing(to: snapshot.notes)
+        do { try store.save(event, span: .thisEvent, commit: true) }
+        catch { store.reset(); throw error }
+        events = try readEvents()
+    }
+    /// Runs on the main context; all mutations are synchronous so user edits cannot interleave.
+    func checkUnfinished(context: ModelContext, force: Bool = false) {
+        guard automaticallyReschedules, !working, !context.hasChanges,
+              force || Date().timeIntervalSince(lastAutomationCheck) >= 60 else { return }
+        lastAutomationCheck = Date()
+        let now = Date()
+        do {
+            let local = try context.fetch(FetchDescriptor<PlannerEvent>())
+            let assignments = try context.fetch(FetchDescriptor<Assignment>())
+            let missedLocal = local.filter { StudyBlockTracking.isUnfinished(start: $0.startDate, minutes: $0.durationMinutes, notes: $0.details, now: now) }
+            // Read external blocks on every check, including after wake/reopen. No permission prompts.
+            if EKEventStore.authorizationStatus(for: .event) == .fullAccess { try refresh() }
+            else if hasAccess { hasAccess = false; events = [] }
+            if !hasAccess && !settings.busyCalendarIDs.isEmpty {
+                throw PlanningError.invalid("Reconnect calendars before automatically moving blocks around your commitments.")
+            }
+            let missedExternal = events.filter { $0.ownTaskID != nil && StudyBlockTracking.read($0.notes).completedAt == nil && $0.end <= now }
+            guard !missedLocal.isEmpty || !missedExternal.isEmpty else { return }
+            var taskMap = Dictionary(uniqueKeysWithValues: taskCandidates().map { ($0.id, $0) })
+            for assignment in assignments {
+                taskMap["local:\(assignment.id.uuidString)"] = PlanningTask(id: "local:\(assignment.id.uuidString)", title: assignment.title, deadline: assignment.dueDate)
+            }
+            let completedIDs = Set(assignments.filter { $0.status == TaskStatus.done.rawValue }.map { "local:\($0.id.uuidString)" })
+            var busy = busyTimes(excludingTasks: Set(settings.taskOverrides.values.filter(\.selected).map(\.id)).union(missedLocal.compactMap { PlannedStudyBlock.taskID(in: $0.details) }).union(missedExternal.compactMap(\.ownTaskID))).filter { $0.end > now }
+            busy += local.map { PlanningBusyTime(start: $0.startDate, end: $0.startDate.addingTimeInterval(Double($0.durationMinutes * 60)), taskID: PlannedStudyBlock.taskID(in: $0.details)) }.filter { $0.end > now }
+            var moved = 0, waiting = 0
+            func target(taskID: String, notes: String, minutes: Int) throws -> Date? {
+                guard !completedIDs.contains(taskID) else { return nil }
+                let tracking = StudyBlockTracking.read(notes)
+                // Live deadlines take precedence over the original deadline saved in the block.
+                guard let deadline = taskMap[taskID]?.deadline ?? tracking.deadline ?? settings.taskOverrides[taskID]?.deadline else { waiting += 1; return nil }
+                let date = try StudyBlockTracking.nextStart(minutes: minutes, deadline: deadline, busy: busy, preferences: settings.preferences, now: now)
+                if date == nil { waiting += 1 }
+                return date
+            }
+            for event in missedLocal.sorted(by: { $0.startDate < $1.startDate }) {
+                guard let taskID = PlannedStudyBlock.taskID(in: event.details), let start = try target(taskID: taskID, notes: event.details, minutes: event.durationMinutes) else { continue }
+                let original = event.record
+                var tracking = StudyBlockTracking.read(event.details); tracking.previousStart = event.startDate
+                event.details = tracking.writing(to: event.details)
+                if let reminder = event.reminderDate { event.reminderDate = start.addingTimeInterval(reminder.timeIntervalSince(event.startDate)) }
+                event.startDate = start
+                do { try context.save() } catch { event.apply(original); throw error }
+                busy.append(.init(start: start, end: start.addingTimeInterval(Double(event.durationMinutes * 60)), taskID: taskID)); moved += 1
+            }
+            for snapshot in missedExternal.sorted(by: { $0.start < $1.start }) {
+                guard let taskID = snapshot.ownTaskID, !completedIDs.contains(taskID) else { continue }
+                guard let event = store.event(withIdentifier: snapshot.eventIdentifier), event.notes == snapshot.notes,
+                      event.startDate == snapshot.start, event.endDate == snapshot.end,
+                      event.calendar.allowsContentModifications, !event.hasRecurrenceRules,
+                      event.url?.scheme == "studypilot", event.url?.host == "plan" else { waiting += 1; continue }
+                let minutes = Int(snapshot.end.timeIntervalSince(snapshot.start) / 60)
+                guard let start = try target(taskID: taskID, notes: snapshot.notes, minutes: minutes) else { continue }
+                var tracking = StudyBlockTracking.read(snapshot.notes); tracking.previousStart = snapshot.start
+                event.notes = tracking.writing(to: snapshot.notes); event.startDate = start
+                event.endDate = start.addingTimeInterval(snapshot.end.timeIntervalSince(snapshot.start))
+                do { try store.save(event, span: .thisEvent, commit: true) } catch { store.reset(); throw error }
+                busy.append(.init(start: start, end: event.endDate, taskID: taskID)); moved += 1
+            }
+            if hasAccess { events = try readEvents() }
+            automationMessage = "\(moved) unfinished blocks rescheduled." + (waiting > 0 ? " \(waiting) need attention: check deadlines, available study hours, or calendar write access." : "")
+            if moved > 0 { Task { await ReminderService.shared.reconcile(context: context) } }
+        } catch { automationMessage = "Automatic rescheduling needs attention: \(error.localizedDescription)" }
+    }
+
 }
 
 @MainActor enum StudyPlanningAI {

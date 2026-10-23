@@ -10,7 +10,7 @@ struct StudyPlanningView: View {
     @Environment(AppState.self) private var app
     @LiveQuery(sort: \Assignment.dueDate) private var assignments: [Assignment]
     @LiveQuery(sort: \PlannerEvent.startDate) private var localEvents: [PlannerEvent]
-    @State private var service = CalendarPlanningService()
+    @Environment(CalendarPlanningService.self) private var service
     @State private var tasks: [PlanningTask] = []
     @State private var plan: StudyPlan?
     @State private var aiTaskID: String?
@@ -22,6 +22,7 @@ struct StudyPlanningView: View {
     @State private var configured = false
 
     var body: some View {
+        @Bindable var service = service
         VStack(spacing: 0) {
             HStack {
                 Label("Plan my study", systemImage: "sparkles").font(.title2.bold())
@@ -35,6 +36,7 @@ struct StudyPlanningView: View {
                     Text("Choose assignments, estimate the work, and preview a schedule around your classes and other commitments.").foregroundStyle(.secondary)
                     connectionSection
                     if service.hasAccess { calendarsSection }
+                    StudySessionsView()
                     preferencesSection
                     tasksSection
                     if let error = service.error { Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.red).textSelection(.enabled) }
@@ -85,7 +87,8 @@ struct StudyPlanningView: View {
         }.pilotCard()
     }
     private var calendarsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        @Bindable var service = service
+        return         VStack(alignment: .leading, spacing: 12) {
             Text("Which calendars contain your assignments?").font(.headline)
             Text("Mark deadline calendars to list their events below, then select the actual assignments. Busy calendars protect your existing commitments. Selected assignments are treated as deadlines, not occupied time. All-day deadlines are due at 23:59 on their final day.").font(.caption).foregroundStyle(.secondary)
             ForEach(service.calendars) { calendar in
@@ -104,7 +107,8 @@ struct StudyPlanningView: View {
         }.pilotCard()
     }
     private var preferencesSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        @Bindable var service = service
+        return         VStack(alignment: .leading, spacing: 14) {
             Text("2. Your study time").font(.headline)
             HStack(spacing: 20) {
                 Picker("Plan ahead", selection: $service.settings.preferences.days) { Text("7 days").tag(7); Text("14 days").tag(14); Text("28 days").tag(28) }.frame(width: 190)
@@ -123,6 +127,8 @@ struct StudyPlanningView: View {
                 Stepper("Break: \(service.settings.preferences.breakMinutes) min", value: $service.settings.preferences.breakMinutes, in: 0...30, step: 5)
                 Stepper("Daily limit: \(service.settings.preferences.dailyMinutes) min", value: $service.settings.preferences.dailyMinutes, in: 30...480, step: 30)
             }
+            Toggle("Automatically reschedule unchecked blocks after they end", isOn: Binding(get: { service.automaticallyReschedules }, set: { service.settings.autoReschedule = $0; persist() }))
+            Text("Checks every minute while StudyPilot is open, and catches up when reopened. Unchecked means unfinished. Moves study blocks within your study hours before the deadline; assignment deadlines stay unchanged.").font(.caption).foregroundStyle(.secondary)
             Text("Times use this Mac’s time zone: \(TimeZone.current.identifier). The same study window applies to each selected day. Defaults are editable.").font(.caption).foregroundStyle(.secondary)
         }.pilotCard()
     }

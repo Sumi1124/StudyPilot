@@ -15,15 +15,15 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.3.4</string>
+	<string>1.4.0</string>
 	<key>CFBundleVersion</key>
-	<string>8</string>
+	<string>9</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>StudyPilot reads your selected calendars to find assignment deadlines and free time, and adds study blocks only when you choose Add to calendar.</string>
+	<string>StudyPilot reads your selected calendars to find assignment deadlines and free time, adds study blocks when you choose Add to calendar, and moves unfinished StudyPilot blocks when automatic rescheduling is enabled.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>

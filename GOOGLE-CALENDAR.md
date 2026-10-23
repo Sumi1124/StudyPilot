@@ -45,3 +45,11 @@ Google passwords stay with macOS/Google. The application uses EventKit and does 
 You can revoke access in **System Settings → Privacy & Security → Calendars**. Existing local features remain available. A new locally signed app build may require granting access again.
 
 The implementation has scheduling tests and local UI verification. Real Google sign-in, provider synchronization, and adding events to your account require you to connect that account; no Google events were created during development verification.
+
+## Completion and automatic rescheduling (1.4)
+
+Open Calendar or Plan my study to see **Study blocks**. Tick a block when that session is finished. Show completed lets you undo a check. Completing a session does not mark the entire assignment done.
+
+Automatically reschedule unchecked blocks after they end is enabled by default; switch it off under Plan my study → Your study time. StudyPilot checks every minute while open and when reopened. It moves the same unfinished block into a free study window before its assignment deadline, preserving its duration and identity. It uses the scheduling engine on this Mac; Apple Intelligence is not required for rescheduling. The app must be running to check; macOS Calendar sync controls when Google changes appear. Connected-calendar catch-up covers the last seven days. Local saved blocks have no seven-day cutoff.
+
+Blocks with passed deadlines, missing deadlines, insufficient space, or read-only calendars remain visible for attention. Recurring external events are not moved. Completed local assignments are not automatically rescheduled. Progress and the previous scheduled time are kept in event notes, including in JSON backups and Google synchronization. Grant calendar access and keep selected busy calendars current to protect commitments.
