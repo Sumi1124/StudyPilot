@@ -95,3 +95,7 @@ Build caches default to `.build-local/`; set `STUDYPILOT_BUILD_DIR` to use anoth
 ## Version 1.3.1
 
 The complete local macOS release build passed. The bundle and Xcode project validation passed. Confirmed build 5 sorts above 1.3.0 build 4, with identical embedded public verification key and feed URL. The user’s local 1.3.0 app remains in place for an actual in-app upgrade test. This release adds UI controls using the existing persisted appearance setting; no data schema changes.
+
+## Version 1.3.2 — reproduced relaunch blockage
+
+System logs confirmed `App termination blocked by modal sheet`. The downloaded archive’s EdDSA verification had succeeded. Using the live UI, closed Settings, brought Updating StudyPilot to the front, pressed Install and Relaunch, and confirmed the app restarted at 1.3.1 with the Appearance toolbar control. Local compilation passed for the 1.3.2 Settings-dismissal fix.

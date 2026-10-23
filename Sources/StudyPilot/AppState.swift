@@ -26,6 +26,7 @@ public enum AppSection: String, CaseIterable, Identifiable {
     var showingAssignment = false
     var showingSearch = false
     var showingSettings = false
+    var checkForUpdatesAfterSettings = false
     var showingStudyPlanner = false
     var selectedNoteID: UUID?
     var selectedAssignmentID: UUID?

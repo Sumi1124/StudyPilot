@@ -110,3 +110,7 @@ Install 1.3.0 once to enable **Settings → App updates → Check for Updates**.
 ## Version 1.3.1 appearance controls
 
 Use the sun/moon Appearance menu in the main toolbar to choose Light mode, Dark mode, or Follow Mac appearance. The choice applies immediately and stays saved on this Mac. Settings → Appearance offers the same choices. The menu also provides ⇧⌘D to switch between Light and Dark.
+
+## Version 1.3.2 updater fix
+
+Check for Updates now closes Settings first, preventing the Settings sheet from blocking Install and Relaunch. If an editor is open, save or cancel it before checking. During an update, workspace actions are temporarily unavailable. In 1.3.0 or 1.3.1, close Settings before pressing Install and Relaunch if the update appears stuck.

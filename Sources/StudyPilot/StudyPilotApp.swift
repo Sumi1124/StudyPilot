@@ -4,6 +4,7 @@ import StudyPilotData
 
 @main struct StudyPilotApp: App {
     @State private var app = AppState()
+    @ObservedObject private var updater = AppUpdater.shared
     @State private var focus = FocusController()
     private let container: ModelContainer?
     private let startupError: String?
@@ -37,21 +38,21 @@ import StudyPilotData
             }
         }.defaultSize(width: 1280, height: 850)
             .commands {
-                CommandGroup(after: .appInfo) { AppUpdateButton().environment(focus) }
+                CommandGroup(after: .appInfo) { AppUpdateButton().environment(focus).environment(app) }
                 CommandGroup(replacing: .newItem) {
-                    Button("New Assignment") { app.showingAssignment = true }.keyboardShortcut("n")
-                    Button("New Note") { app.section = .notes; app.createNote = true }.keyboardShortcut("n", modifiers: [.command, .shift])
+                    Button("New Assignment") { app.showingAssignment = true }.keyboardShortcut("n").disabled(updater.sessionInProgress)
+                    Button("New Note") { app.section = .notes; app.createNote = true }.keyboardShortcut("n", modifiers: [.command, .shift]).disabled(updater.sessionInProgress)
                 }
                 CommandMenu("Workspace") {
-                    Button("Search & Quick Actions") { app.showingSearch = true }.keyboardShortcut("k")
-                    Button("Plan My Study") { app.showingStudyPlanner = true }.keyboardShortcut("p", modifiers: [.command, .shift])
-                    Button("Focus Session") { app.section = .focus; if focus.state == nil { focus.start(minutes: 25, subjectID: nil) } }.keyboardShortcut("f", modifiers: [.command, .shift])
+                    Button("Search & Quick Actions") { app.showingSearch = true }.keyboardShortcut("k").disabled(updater.sessionInProgress)
+                    Button("Plan My Study") { app.showingStudyPlanner = true }.keyboardShortcut("p", modifiers: [.command, .shift]).disabled(updater.sessionInProgress)
+                    Button("Focus Session") { app.section = .focus; if focus.state == nil { focus.start(minutes: 25, subjectID: nil) } }.keyboardShortcut("f", modifiers: [.command, .shift]).disabled(updater.sessionInProgress)
                     Divider()
                     ForEach(Array(AppSection.allCases.enumerated()), id: \.element.id) { index, section in
-                        Button(section.rawValue) { app.section = section }.keyboardShortcut(KeyEquivalent(Character(String(index + 1))))
+                        Button(section.rawValue) { app.section = section }.keyboardShortcut(KeyEquivalent(Character(String(index + 1)))).disabled(updater.sessionInProgress)
                     }
                 }
-                CommandGroup(replacing: .appSettings) { Button("Settings…") { app.showingSettings = true }.keyboardShortcut(",") }
+                CommandGroup(replacing: .appSettings) { Button("Settings…") { app.showingSettings = true }.keyboardShortcut(",").disabled(updater.sessionInProgress) }
             }
     }
 }
@@ -62,6 +63,7 @@ struct RootView: View {
     @Environment(FocusController.self) private var focus
     private let ticks = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     @Environment(AppState.self) private var app
+    @ObservedObject private var updater = AppUpdater.shared
     @State private var visibility: NavigationSplitViewVisibility = .all
     @AppStorage("appearance") private var appearance = "System"
     var body: some View {
@@ -110,10 +112,15 @@ struct RootView: View {
                         Button { app.showingAssignment = true } label: { Label("New assignment", systemImage: "plus") }.help("New assignment (⌘N)")
                     }
                 }
-        }.frame(minWidth: 960, minHeight: 700)
+        }.disabled(updater.sessionInProgress)
+            .frame(minWidth: 960, minHeight: 700)
             .sheet(isPresented: $app.showingAssignment) { AssignmentEditor() }
             .sheet(isPresented: $app.showingSearch) { CommandPalette() }
-            .sheet(isPresented: $app.showingSettings) { SettingsView() }
+            .sheet(isPresented: $app.showingSettings, onDismiss: {
+                guard app.checkForUpdatesAfterSettings else { return }
+                app.checkForUpdatesAfterSettings = false
+                if let error = updater.check() { app.error = error }
+            }) { SettingsView() }
             .sheet(isPresented: $app.showingStudyPlanner) { StudyPlanningView() }
             .alert("Something needs attention", isPresented: Binding(get: { app.error != nil }, set: { if !$0 { app.error = nil } })) { Button("OK") { app.error = nil } } message: { Text(app.error ?? "") }
             .onReceive(NotificationCenter.default.publisher(for: .studyPilotQueryFailed)) { notice in app.error = notice.userInfo?["message"] as? String }

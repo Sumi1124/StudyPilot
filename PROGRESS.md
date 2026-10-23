@@ -61,3 +61,7 @@ Source uploaded to Sumi1124/StudyPilot. Integrated Sparkle 2.10.0 with a signed 
 ## Version 1.3.1
 
 Added a visible toolbar Appearance menu for Light, Dark, and System modes, plus a ⇧⌘D toggle. Uses the existing saved appearance preference. Version 1.3.1 uses bundle build 5, above version 1.3.0 build 4, for updater detection.
+
+## Version 1.3.2 — updater relaunch fix
+
+Reproduced an in-app update blocked by the open Settings sheet. Update requests from Settings now wait for the sheet’s onDismiss callback before starting Sparkle. Update requests made with another open editor show a useful close-editor message; drafts are not discarded. Workspace controls and shortcuts are disabled while an update session is active so a new sheet cannot block installation. Closing the sheet in the existing 1.3.0 app allowed the original signed 1.3.1 update to install and relaunch successfully.
