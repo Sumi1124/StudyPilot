@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import SwiftData
 import StudyPilotCore
 import StudyPilotData
@@ -99,6 +100,7 @@ struct NoteEditor: View {
     let allNotes: [Note]
     let openNote: (UUID) -> Void
     @State private var preview = false
+    @State private var copiedMarkdown = false
     @State private var flashcards = false
     @State private var tags = ""
     @State private var saveTask: Task<Void, Never>?
@@ -143,11 +145,23 @@ struct NoteEditor: View {
             }
             HStack {
                 Text("\(note.body.split { $0.isWhitespace || $0.isNewline }.count) words").font(.caption).foregroundStyle(.secondary)
+                Button(copiedMarkdown ? "Copied" : "Copy Markdown", systemImage: copiedMarkdown ? "checkmark" : "doc.on.doc") {
+                    NSPasteboard.general.clearContents()
+                    if NSPasteboard.general.setString(note.body, forType: .string) { copiedMarkdown = true }
+                    else { app.error = "The note could not be copied to the clipboard. Please try again." }
+                }
+                .font(.caption)
+                .disabled(note.body.isEmpty)
+                .help("Copy this note’s Markdown source to the clipboard")
                 Spacer()
-                Text("Markdown · [[note links]] · Unicode math: x², √, ∑").font(.system(size: 10)).foregroundStyle(.tertiary)
+                Text("Markdown · [[note links]] · Unicode math: x², √, ∑").font(.system(size: 10)).foregroundStyle(.tertiary).lineLimit(1)
             }
         }.padding(28).background(.background)
             .sheet(isPresented: $flashcards) { NoteFlashcardsView(title: note.title, source: note.body, subjectID: note.subjectID ?? notebooks.first { $0.id == note.notebookID }?.subjectID) }
+            .task(id: copiedMarkdown) {
+                guard copiedMarkdown else { return }
+                do { try await Task.sleep(for: .seconds(2)); copiedMarkdown = false } catch { }
+            }
             .onAppear { tags = note.tags.joined(separator: ", ") }
             .onChange(of: note.title) { scheduleSave() }
             .onChange(of: note.body) { scheduleSave() }

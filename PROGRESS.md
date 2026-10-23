@@ -71,3 +71,7 @@ Reproduced an in-app update blocked by the open Settings sheet. Update requests 
 Native testing revealed that SwiftUI’s onDismiss can fire before the AppKit sheet fully detaches. The updater now waits for the actual visible-sheet state with a four-second timeout and a clear recovery message, instead of immediately rejecting the check. An isolated native test confirmed Settings closes, Sparkle reports the version result, and the workspace re-enables after dismissal. A real 1.3.1 → 1.3.2 install/relaunch also completed successfully with Settings closed.
 
 Verified the final 1.3.2 → 1.3.3 in-app download/install/relaunch on the main app and the corrected Settings → Check for Updates flow after installation. The main app is running 1.3.3. All 44 tests pass.
+
+## Version 1.3.4
+
+Added Copy Markdown to the note editor with a brief copy confirmation and empty-note handling. Uses the system clipboard and preserves Markdown source. Build 8 is higher than installed 1.3.3 build 7; the installed app is deliberately left on 1.3.3 for the user to test updating independently.
