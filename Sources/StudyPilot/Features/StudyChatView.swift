@@ -48,6 +48,11 @@ struct StudyChatView: View {
                     Text("Chat history is saved locally, separately from workspace JSON backups. AI can make mistakes; check important details.").font(.caption).foregroundStyle(.secondary)
                     if let reason = chat.unavailableReason { Label(reason, systemImage: "info.circle").font(.callout).foregroundStyle(.orange) }
                 }.padding(24)
+                HStack {
+                    Toggle("Use my study tasks and note titles", isOn: $chat.useStudyContext).toggleStyle(.checkbox).disabled(chat.generating)
+                    Spacer()
+                }.font(.callout).padding(.horizontal, 24).padding(.bottom, 8)
+                if let status = chat.contextStatus, chat.useStudyContext { Text(status).font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 24).padding(.bottom, 8) }
                 CalendarChatPanel().padding(.horizontal, 20).padding(.bottom, 12)
                 Divider()
                 ScrollViewReader { proxy in

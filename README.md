@@ -134,3 +134,11 @@ AI Chat now reads local events, assignment deadlines, and the synced calendars s
 Examples: “What is on my calendar today?”, “Move Math study to tomorrow at 5pm”, or “Move my next study block to the next free study slot.” Chat prepares one change at a time, shows the event and old/new times, and requires **Apply move**. It checks availability and the source event again before saving. It preserves duration and reminder timing, and rejects changes to assignment deadlines, completed study blocks, all-day/recurring/read-only events, and study blocks that would pass their deadline. An optional switch limits proposals to StudyPilot study blocks. Automatic slot finding uses configured study hours, breaks, and daily limits, for blocks up to two hours. Explicit times can be used for longer single events.
 
 Google synchronization is handled by macOS Calendar. The selected busy calendars determine which commitments are protected. Calendar chat previews are temporary and cannot be replayed after an applied move. Chat does not create or delete events or perform bulk moves.
+
+### Subject-aware conversations (1.7)
+
+Chat can now search unfinished assignments and note titles using subject labels, related study topics, and minor spelling variations. “Math tasks” can find “Quadratic equations” without the word math in the title. Calendar events include their linked subject, and relevant events are prioritized when the model's context is limited. Inferred topic labels are suggestions; no subjects or assignments are changed automatically.
+
+**Use my study tasks and note titles** controls this local retrieval and remembers your choice. Assignment descriptions are included only as short matching excerpts; note bodies still require an explicit attachment. Conversation history is compacted so one long answer does not remove every earlier reference. Follow-ups such as “move it tomorrow” use recent task context; changing to science starts a new subject search.
+
+Calendar-enabled replies use Apple's guided generation instead of relying on handwritten JSON. Ordinary questions cannot select an event to move; calendar changes still require the existing reviewed Apply move flow. The underlying model remains Apple's on-device model, with its existing hardware and OS requirements.

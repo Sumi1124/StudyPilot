@@ -7,6 +7,10 @@ import FoundationModels
 
 @MainActor @Observable final class StudyChatService {
     let calendar = CalendarChatService()
+    var useStudyContext = UserDefaults.standard.object(forKey: "chatUseStudyContext") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(useStudyContext, forKey: "chatUseStudyContext") }
+    }
+    var contextStatus: String?
     var threads: [StudyChatThread] = []
     var selectedID: UUID?
     var generating = false
@@ -73,8 +77,11 @@ import FoundationModels
         if threads[index].messages.count == 1 { threads[index].title = String(message.text.prefix(60)) }
         threads[index].updatedAt = Date()
         do {
-            let snapshot = try calendar.snapshot()
-            let prompt = try StudyChat.prompt(messages: threads[index].messages, calendarSnapshot: snapshot?.summary)
+            let query = StudyUnderstanding.query(messages: threads[index].messages)
+            let snapshot = try calendar.snapshot(query: query)
+            let study = useStudyContext ? try calendar.studyContext(query: query) : nil
+            contextStatus = study.map { "\($0.1) relevant study items included · task details and note titles stay on this Mac" }
+            let prompt = try StudyChat.prompt(messages: threads[index].messages, calendarSnapshot: snapshot?.summary, studySnapshot: study?.0)
             try save()
             generate(prompt: prompt, threadID: threads[index].id, snapshot: snapshot)
             return true
@@ -83,7 +90,14 @@ import FoundationModels
     func retry() {
         guard !generating, let thread = selected, thread.messages.last?.role == "user" else { return }
         if let reason = unavailableReason { error = reason; return }
-        do { error = nil; let snapshot = try calendar.snapshot(); generate(prompt: try StudyChat.prompt(messages: thread.messages, calendarSnapshot: snapshot?.summary), threadID: thread.id, snapshot: snapshot) }
+        do {
+            error = nil
+            let query = StudyUnderstanding.query(messages: thread.messages)
+            let snapshot = try calendar.snapshot(query: query)
+            let study = useStudyContext ? try calendar.studyContext(query: query) : nil
+            contextStatus = study.map { "\($0.1) relevant study items included · task details and note titles stay on this Mac" }
+            generate(prompt: try StudyChat.prompt(messages: thread.messages, calendarSnapshot: snapshot?.summary, studySnapshot: study?.0), threadID: thread.id, snapshot: snapshot)
+        }
         catch { self.error = error.localizedDescription }
     }
     func applyCalendarMove() {
@@ -103,19 +117,15 @@ import FoundationModels
             do {
                 #if canImport(FoundationModels)
                 if #available(macOS 26, *) {
-                    let session = LanguageModelSession(instructions: snapshot == nil ? StudyChat.instructions : CalendarChat.instructions)
-                    let response = try await session.respond(to: prompt, options: GenerationOptions(temperature: 0.4, maximumResponseTokens: 800))
+                    let messages = threads.first { $0.id == threadID }?.messages ?? []
+                    let wantsMove = StudyUnderstanding.requestsMove(messages: messages)
+                    let result = try await StudyChatGeneration.reply(to: prompt, eventIDs: snapshot.map { wantsMove ? Array($0.aliases.keys) : [] })
                     try Task.checkCancellation()
                     guard requestID == id, let index = threads.firstIndex(where: { $0.id == threadID }) else { return }
-                    var reply = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !reply.isEmpty, reply.count <= 12_000 else { throw PlanningError.invalid("The model returned an empty or oversized reply. Try a shorter question.") }
-                    if let snapshot {
-                        let result = try CalendarChatResponse.decode(reply)
-                        reply = result.reply
-                        if let move = result.move {
-                            do { try calendar.propose(move, snapshot: snapshot, threadID: threadID) }
-                            catch { reply += "\n\nNo changes made: " + error.localizedDescription }
-                        }
+                    var reply = result.reply
+                    if let snapshot, let move = result.move {
+                        do { try calendar.propose(move, snapshot: snapshot, threadID: threadID) }
+                        catch { reply += "\n\nNo changes made: " + error.localizedDescription }
                     }
                     threads[index].messages.append(StudyChatMessage(role: "assistant", text: reply)); threads[index].updatedAt = Date()
                     do { try save() } catch { self.error = "The reply is visible but could not be saved: \(error.localizedDescription)" }

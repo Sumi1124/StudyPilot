@@ -20,8 +20,8 @@ import Testing
     messages.append(.init(role: "user", text: "Explain fractions", context: "Note: 1/2"))
     let prompt = try StudyChat.prompt(messages: messages)
     let json = String(prompt.split(separator: "\n", maxSplits: 1)[1])
-    let included = try JSONDecoder().decode([StudyChatMessage].self, from: Data(json.utf8))
-    #expect(included.last?.text == "Explain fractions"); #expect(included.last?.context == "Note: 1/2")
+    let included = try JSONDecoder().decode([[String: String]].self, from: Data(json.utf8))
+    #expect(included.last?["text"] == "Explain fractions"); #expect(included.last?["context"] == "Note: 1/2")
     #expect(prompt.utf8.count < 6300)
     #expect(!prompt.contains("EARLIEST_UNIQUE_TURN"))
 }
