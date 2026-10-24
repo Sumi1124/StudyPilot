@@ -67,7 +67,7 @@ struct SettingsView: View {
                     LabeledContent("New note", value: "⇧⌘N")
                     LabeledContent("Search & quick actions", value: "⌘K")
                     LabeledContent("Start / open focus", value: "⇧⌘F")
-                    LabeledContent("Navigate workspace sections", value: "⌘1–8")
+                    LabeledContent("Navigate workspace sections", value: "⌘1–9")
                 }
                 if let message { Text(message).font(.caption).foregroundStyle(Color(hex: "2B998C")).textSelection(.enabled) }
                 if let error { Text(error).font(.caption).foregroundStyle(.red).textSelection(.enabled) }

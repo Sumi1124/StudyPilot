@@ -7,6 +7,7 @@ import StudyPilotData
     @ObservedObject private var updater = AppUpdater.shared
     @State private var focus = FocusController()
     @State private var planning = CalendarPlanningService()
+    @State private var chat = StudyChatService()
     private let container: ModelContainer?
     private let startupError: String?
     init() {
@@ -28,7 +29,7 @@ import StudyPilotData
     var body: some Scene {
         Window("StudyPilot", id: "main") {
             if let container {
-                RootView().environment(app).environment(focus).environment(planning).modelContainer(container).tint(.pilot)
+                RootView().environment(app).environment(focus).environment(planning).environment(chat).modelContainer(container).tint(.pilot)
             } else {
                 VStack(spacing: 18) {
                     Image(systemName: "externaldrive.badge.exclamationmark").font(.largeTitle)
@@ -59,6 +60,7 @@ import StudyPilotData
 }
 
 struct RootView: View {
+    @Environment(StudyChatService.self) private var chat
     @Environment(CalendarPlanningService.self) private var planning
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
@@ -86,6 +88,7 @@ struct RootView: View {
                     Section("LEARN & GROW") {
                         ForEach(AppSection.allCases.dropFirst(3).prefix(4)) { section in Label(section.rawValue, systemImage: section.symbol).tag(section).padding(.vertical, 5) }
                     }
+                    Section { Label(AppSection.chat.rawValue, systemImage: AppSection.chat.symbol).tag(AppSection.chat).padding(.vertical, 5) }
                     Section { Label(AppSection.library.rawValue, systemImage: AppSection.library.symbol).tag(AppSection.library).padding(.vertical, 5) }
                 }.listStyle(.sidebar)
                 VStack(alignment: .leading, spacing: 10) {
@@ -104,6 +107,7 @@ struct RootView: View {
                 case .revision: RevisionView()
                 case .focus: FocusView()
                 case .progress: AcademicProgressView()
+                case .chat: StudyChatView()
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity).background(Color(nsColor: .windowBackgroundColor))
                 .toolbar {
@@ -134,7 +138,7 @@ struct RootView: View {
                 if !updater.isBusy && !app.showingStudyPlanner { planning.checkUnfinished(context: context) }
             }
             .task {
-                if let folder = context.container.configurations.first?.url.deletingLastPathComponent() { planning.configure(folder: folder) }
+                if let folder = context.container.configurations.first?.url.deletingLastPathComponent() { planning.configure(folder: folder); chat.configure(folder: folder) }
                 planning.checkUnfinished(context: context, force: true)
                 focus.tick(context: context)
                 await ReminderService.shared.reconcile(context: context)

@@ -120,3 +120,9 @@ Version 1.3.3 completes the updater fix by waiting for the Settings animation to
 ## Version 1.3.4 — Copy Markdown
 
 Open a note and use **Copy Markdown** beside the word count to copy the note’s full Markdown source. The button briefly shows Copied. It works in Write and Preview modes and is unavailable for an empty note.
+
+### AI Chat (1.5)
+
+Choose **AI Chat** in the sidebar (⌘9). Ask for explanations, practice questions, feedback, or planning help. Attach one note or assignment to include up to 1,800 characters of its content; other workspace content is not included automatically. Send with ⌘Return. Stop cancels a reply; Retry reply retries the saved question. Copy answers or save them to Notes.
+
+Uses Apple's Foundation Models on macOS 26 with Apple Intelligence enabled on a compatible Mac. No API keys, cloud chat provider, or web search. Saved conversations are stored in `StudyChats.json` beside the database and are separate from workspace JSON backups. Up to 50 conversations, 200 messages each. Recent history is included within a bounded context window; older turns may be omitted. Delete chat removes that conversation after confirmation. AI answers may be inaccurate and cannot directly edit calendars or assignments.
