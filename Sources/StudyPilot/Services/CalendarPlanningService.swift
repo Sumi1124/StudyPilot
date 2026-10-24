@@ -28,6 +28,8 @@ struct CalendarPlanningEvent: Identifiable, Equatable {
     let free: Bool
     let ownTaskID: String?
     let modified: Date?
+    let writable: Bool
+    let recurring: Bool
     var deadline: Date { allDay ? end.addingTimeInterval(-60) : start }
 }
 
@@ -103,10 +105,10 @@ struct CalendarPlanningSettings: Codable {
         events = try readEvents()
         lastRefresh = Date(); needsRefresh = false
     }
-    private func readEvents() throws -> [CalendarPlanningEvent] {
+    private func readEvents(range: DateInterval? = nil) throws -> [CalendarPlanningEvent] {
         let now = Date(), calendar = Calendar.current
-        let start = calendar.date(byAdding: .day, value: -7, to: calendar.startOfDay(for: now))!
-        let end = calendar.date(byAdding: .day, value: settings.preferences.days, to: calendar.startOfDay(for: now))!
+        let start = range?.start ?? calendar.date(byAdding: .day, value: -7, to: calendar.startOfDay(for: now))!
+        let end = range?.end ?? calendar.date(byAdding: .day, value: settings.preferences.days, to: calendar.startOfDay(for: now))!
         var selectedIDs = settings.deadlineCalendarIDs.union(settings.busyCalendarIDs)
         if !settings.destinationID.isEmpty { selectedIDs.insert(settings.destinationID) }
         let selectedCalendars = store.calendars(for: .event).filter { selectedIDs.contains($0.calendarIdentifier) }
@@ -127,8 +129,31 @@ struct CalendarPlanningSettings: Codable {
             return CalendarPlanningEvent(id: id, eventIdentifier: event.eventIdentifier ?? "", calendarID: event.calendar.calendarIdentifier,
                 title: event.title ?? "Untitled calendar event", notes: event.notes ?? "", start: start, end: end,
                 allDay: event.isAllDay, free: event.availability == .free,
-                ownTaskID: owned ? PlannedStudyBlock.taskID(in: event.notes ?? "") : nil, modified: event.lastModifiedDate)
+                ownTaskID: owned ? PlannedStudyBlock.taskID(in: event.notes ?? "") : nil, modified: event.lastModifiedDate, writable: event.calendar.allowsContentModifications, recurring: event.hasRecurrenceRules)
         }.sorted { $0.start == $1.start ? $0.id < $1.id : $0.start < $1.start }
+    }
+    func chatEvents(in range: DateInterval) throws -> [CalendarPlanningEvent] {
+        try refresh()
+        return try readEvents(range: range)
+    }
+    func moveFromChat(_ snapshot: CalendarPlanningEvent, to start: Date) throws {
+        guard let event = store.event(withIdentifier: snapshot.eventIdentifier),
+              event.calendar.calendarIdentifier == snapshot.calendarID, event.title == snapshot.title,
+              (event.notes ?? "") == snapshot.notes, event.startDate == snapshot.start, event.endDate == snapshot.end,
+              event.lastModifiedDate == snapshot.modified, event.calendar.allowsContentModifications,
+              !event.hasRecurrenceRules, !event.isAllDay, event.status != .canceled else {
+            throw PlanningError.invalid("This calendar event changed or cannot be moved. Ask for a fresh proposal.")
+        }
+        let shift = start.timeIntervalSince(snapshot.start)
+        if snapshot.ownTaskID != nil {
+            var progress = StudyBlockTracking.read(snapshot.notes); progress.previousStart = snapshot.start
+            event.notes = progress.writing(to: snapshot.notes)
+        }
+        for alarm in event.alarms ?? [] { if let date = alarm.absoluteDate { alarm.absoluteDate = date.addingTimeInterval(shift) } }
+        event.startDate = start; event.endDate = snapshot.end.addingTimeInterval(shift)
+        do { try store.save(event, span: .thisEvent, commit: true) }
+        catch { store.reset(); throw error }
+        needsRefresh = true
     }
     func taskCandidates() -> [PlanningTask] {
         events.filter { settings.deadlineCalendarIDs.contains($0.calendarID) && $0.ownTaskID == nil }.map { event in

@@ -44,10 +44,11 @@ struct StudyChatView: View {
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack { Label("AI Chat", systemImage: "bubble.left.and.bubble.right.fill").font(.title2.bold()); Spacer(); Text("On this Mac").font(.caption).foregroundStyle(Color.pilot) }
-                    Text("Ask for explanations, hints, feedback, or a study plan. Attach a note or assignment when you want help with it.").font(.callout).foregroundStyle(.secondary)
+                    Text("Ask about your calendar, request a move, or get study help. Calendar changes are shown for review before you apply them.").font(.callout).foregroundStyle(.secondary)
                     Text("Chat history is saved locally, separately from workspace JSON backups. AI can make mistakes; check important details.").font(.caption).foregroundStyle(.secondary)
                     if let reason = chat.unavailableReason { Label(reason, systemImage: "info.circle").font(.callout).foregroundStyle(.orange) }
                 }.padding(24)
+                CalendarChatPanel().padding(.horizontal, 20).padding(.bottom, 12)
                 Divider()
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -55,19 +56,20 @@ struct StudyChatView: View {
                             if chat.selected?.messages.isEmpty != false {
                                 VStack(alignment: .leading, spacing: 14) {
                                     Text("What would you like to work on?").font(.title3.bold())
-                                    ForEach(["Explain a topic step by step", "Quiz me on my attached note", "Help me break down this assignment"], id: \.self) { prompt in
+                                    ForEach(["What is on my calendar today?", "Move my next study block to the next free study slot", "Quiz me on my attached note"], id: \.self) { prompt in
                                         Button(prompt, systemImage: "sparkles") { draft = prompt }
                                     }
                                 }.padding(.vertical, 30)
                             }
                             ForEach(chat.selected?.messages ?? []) { message in messageView(message) }
+                            if let proposal = chat.calendar.pending, proposal.threadID == chat.selectedID { CalendarMovePreview(proposal: proposal) }
                             if chat.generating { HStack { ProgressView().controlSize(.small); Text("Thinking on your Mac…").foregroundStyle(.secondary) } }
                             if let error = chat.error { Text(error).foregroundStyle(.red).textSelection(.enabled) }
                             if !chat.generating && chat.selected?.messages.last?.role == "user" { Button("Retry reply", systemImage: "arrow.clockwise") { chat.retry() } }
                             Color.clear.frame(height: 1).id("bottom")
                         }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
                     }.onChange(of: chat.selected?.messages.count) { proxy.scrollTo("bottom", anchor: .bottom) }
-                        .onChange(of: chat.selectedID) { proxy.scrollTo("bottom", anchor: .bottom) }
+                        .onChange(of: chat.selectedID) { chat.calendar.pending = nil; proxy.scrollTo("bottom", anchor: .bottom) }
                         .onChange(of: chat.generating) { proxy.scrollTo("bottom", anchor: .bottom) }
                 }
                 Divider()

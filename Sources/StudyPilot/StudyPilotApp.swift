@@ -138,7 +138,7 @@ struct RootView: View {
                 if !updater.isBusy && !app.showingStudyPlanner { planning.checkUnfinished(context: context) }
             }
             .task {
-                if let folder = context.container.configurations.first?.url.deletingLastPathComponent() { planning.configure(folder: folder); chat.configure(folder: folder) }
+                if let folder = context.container.configurations.first?.url.deletingLastPathComponent() { planning.configure(folder: folder); chat.configure(folder: folder); chat.calendar.configure(context: context, planning: planning) }
                 planning.checkUnfinished(context: context, force: true)
                 focus.tick(context: context)
                 await ReminderService.shared.reconcile(context: context)

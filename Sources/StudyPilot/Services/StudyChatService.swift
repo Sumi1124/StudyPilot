@@ -6,6 +6,7 @@ import FoundationModels
 #endif
 
 @MainActor @Observable final class StudyChatService {
+    let calendar = CalendarChatService()
     var threads: [StudyChatThread] = []
     var selectedID: UUID?
     var generating = false
@@ -44,7 +45,7 @@ import FoundationModels
     }
     func newChat() {
         guard !generating else { return }
-        error = nil
+        error = nil; calendar.pending = nil
         if let empty = threads.first(where: { $0.messages.isEmpty }) { selectedID = empty.id; return }
         guard threads.count < 50 else { error = "You have 50 saved chats. Delete a conversation before starting another."; return }
         let thread = StudyChatThread(); threads.insert(thread, at: 0); selectedID = thread.id
@@ -57,7 +58,7 @@ import FoundationModels
         do { try save(); self.selectedID = threads.first?.id; error = nil } catch { threads = previous; self.error = error.localizedDescription }
     }
     func stop() {
-        requestID = nil; request?.cancel(); request = nil; generating = false
+        requestID = nil; request?.cancel(); request = nil; generating = false; calendar.pending = nil
     }
     @discardableResult func send(_ text: String, context: String) -> Bool {
         guard !generating else { return false }
@@ -72,31 +73,50 @@ import FoundationModels
         if threads[index].messages.count == 1 { threads[index].title = String(message.text.prefix(60)) }
         threads[index].updatedAt = Date()
         do {
-            let prompt = try StudyChat.prompt(messages: threads[index].messages)
+            let snapshot = try calendar.snapshot()
+            let prompt = try StudyChat.prompt(messages: threads[index].messages, calendarSnapshot: snapshot?.summary)
             try save()
-            generate(prompt: prompt, threadID: threads[index].id)
+            generate(prompt: prompt, threadID: threads[index].id, snapshot: snapshot)
             return true
         } catch { threads = previous; self.error = error.localizedDescription; return false }
     }
     func retry() {
         guard !generating, let thread = selected, thread.messages.last?.role == "user" else { return }
         if let reason = unavailableReason { error = reason; return }
-        do { error = nil; generate(prompt: try StudyChat.prompt(messages: thread.messages), threadID: thread.id) }
+        do { error = nil; let snapshot = try calendar.snapshot(); generate(prompt: try StudyChat.prompt(messages: thread.messages, calendarSnapshot: snapshot?.summary), threadID: thread.id, snapshot: snapshot) }
         catch { self.error = error.localizedDescription }
     }
-    private func generate(prompt: String, threadID: UUID) {
+    func applyCalendarMove() {
+        guard !generating, let proposal = calendar.pending, proposal.threadID == selectedID else { return }
+        do {
+            let text = try calendar.apply()
+            if let index = threads.firstIndex(where: { $0.id == proposal.threadID }), threads[index].messages.count < 200 {
+                threads[index].messages.append(StudyChatMessage(role: "assistant", text: text)); threads[index].updatedAt = Date()
+                do { try save() } catch { self.error = "The move was applied, but the chat confirmation could not be saved: \(error.localizedDescription)" }
+            }
+        } catch { self.error = error.localizedDescription }
+    }
+    private func generate(prompt: String, threadID: UUID, snapshot: CalendarChatSnapshot?) {
         let id = UUID(); requestID = id; generating = true
         request = Task {
             defer { if requestID == id { generating = false; requestID = nil; request = nil } }
             do {
                 #if canImport(FoundationModels)
                 if #available(macOS 26, *) {
-                    let session = LanguageModelSession(instructions: StudyChat.instructions)
-                    let response = try await session.respond(to: prompt, options: GenerationOptions(temperature: 0.4, maximumResponseTokens: 700))
+                    let session = LanguageModelSession(instructions: snapshot == nil ? StudyChat.instructions : CalendarChat.instructions)
+                    let response = try await session.respond(to: prompt, options: GenerationOptions(temperature: 0.4, maximumResponseTokens: 800))
                     try Task.checkCancellation()
                     guard requestID == id, let index = threads.firstIndex(where: { $0.id == threadID }) else { return }
-                    let reply = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                    var reply = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !reply.isEmpty, reply.count <= 12_000 else { throw PlanningError.invalid("The model returned an empty or oversized reply. Try a shorter question.") }
+                    if let snapshot {
+                        let result = try CalendarChatResponse.decode(reply)
+                        reply = result.reply
+                        if let move = result.move {
+                            do { try calendar.propose(move, snapshot: snapshot, threadID: threadID) }
+                            catch { reply += "\n\nNo changes made: " + error.localizedDescription }
+                        }
+                    }
                     threads[index].messages.append(StudyChatMessage(role: "assistant", text: reply)); threads[index].updatedAt = Date()
                     do { try save() } catch { self.error = "The reply is visible but could not be saved: \(error.localizedDescription)" }
                 } else { throw PlanningError.invalid(unavailableReason ?? "AI chat is unavailable.") }

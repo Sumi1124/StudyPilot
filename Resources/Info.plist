@@ -15,15 +15,15 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.5.0</string>
+	<string>1.6.0</string>
 	<key>CFBundleVersion</key>
-	<string>10</string>
+	<string>11</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>StudyPilot reads your selected calendars to find assignment deadlines and free time, adds study blocks when you choose Add to calendar, and moves unfinished StudyPilot blocks when automatic rescheduling is enabled.</string>
+	<string>StudyPilot reads your selected calendars to find assignment deadlines and free time, adds study blocks when you choose Add to calendar, and moves unfinished StudyPilot blocks when automatic rescheduling is enabled. AI Chat can read your selected calendars and move a writable event after you review and apply its proposal.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
