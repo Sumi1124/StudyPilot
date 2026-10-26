@@ -34,6 +34,7 @@ public enum WorkspaceFacts {
     public static func request(_ text: String, followingWorkspaceAnswer: Bool = false, previousScope: String? = nil) -> WorkspaceFactRequest? {
         let words = Set(StudyUnderstanding.tokens(text)), normalized = StudyUnderstanding.tokens(text).joined(separator: " ")
         guard !StudyUnderstanding.requestsMove(messages: [.init(role: "user", text: text)]) else { return nil }
+        if isSpecific(text) && StudyUnderstanding.topics(in: text).isEmpty { return nil }
         if normalized.hasPrefix("what is a ") && !followingWorkspaceAnswer { return nil }
         if !words.isDisjoint(with: ["week", "weeks", "days", "yesterday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]) { return nil }
         if !words.isDisjoint(with: ["am", "pm"]) || ((!words.isDisjoint(with: ["at", "before", "after"])) && words.contains(where: { Int($0) != nil })) { return nil }
@@ -62,7 +63,7 @@ public enum WorkspaceFacts {
         let words = Set(StudyUnderstanding.tokens(text))
         guard !words.isDisjoint(with: ["it", "that", "this", "one"]), StudyUnderstanding.topics(in: text).isEmpty else { return text }
         let titles = Set(sources.map { $0.title })
-        if titles.count > 1 { return nil }
+        if titles.count != 1 { return nil }
         return titles.first.map { text + " " + $0 } ?? text
     }
     public static func isSpecific(_ query: String) -> Bool { !StudyUnderstanding.tokens(query).allSatisfy { generic.contains($0) } }

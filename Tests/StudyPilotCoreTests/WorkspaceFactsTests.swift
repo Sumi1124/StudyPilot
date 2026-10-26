@@ -91,3 +91,11 @@ private func factTasks() -> [WorkspaceFactTask] {
     #expect(!StudyUnderstanding.isLearningQuestion("Move my math session to tomorrow"))
     #expect(!StudyUnderstanding.isLearningQuestion("What tasks are due today?"))
 }
+@Test func unrecognizedCalendarQualifiersAreNotMisreportedAsExactEmptyResults() {
+    #expect(WorkspaceFacts.request("Is there anything on my calendar today?") == nil)
+    #expect(WorkspaceFacts.request("Show urgent tasks") == nil)
+    #expect(WorkspaceFacts.request("What's on my calendar today?") == .calendar(0))
+}
+@Test func anUnanchoredPronounDoesNotBecomeAnExactAnswerAboutEveryTask() {
+    #expect(WorkspaceFacts.followupQuery("When is it due?", sources: []) == nil)
+}

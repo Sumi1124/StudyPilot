@@ -93,11 +93,11 @@ struct CalendarChatProposal: Identifiable {
             let lines = sources.map { "• \($0.title) — \($0.detail)" }.joined(separator: "\n")
             return .init(text: values.isEmpty ? "No events or deadlines found for \(label) in \(scope)." : "\(values.count) events or deadlines for \(label) in \(scope):\n\n" + lines + (values.count > 15 ? "\n\nShowing the first 15. Open Calendar for more." : ""), sources: sources)
         }
-        guard useStudyContext else { return .init(text: "Enable Use my study tasks in Context & sources so I can check saved assignments.", sources: []) }
+        guard useStudyContext || enabled else { return .init(text: "Enable study tasks or calendars in Context & sources so I can check those records.", sources: []) }
         let subjects = try context.fetch(FetchDescriptor<Subject>())
-        var tasks = try context.fetch(FetchDescriptor<Assignment>()).map { item in WorkspaceFactTask(record: item.record, subject: subjects.first { $0.id == item.subjectID }?.name ?? "") }
-        var scope = "Only saved StudyPilot assignments were checked. Connect and select assignment calendars to include Google deadlines."
-        if let planning, planning.hasAccess {
+        var tasks = useStudyContext ? try context.fetch(FetchDescriptor<Assignment>()).map { item in WorkspaceFactTask(record: item.record, subject: subjects.first { $0.id == item.subjectID }?.name ?? "") } : []
+        var scope = useStudyContext ? "Only saved StudyPilot assignments were checked. Enable, connect and select assignment calendars to include Google deadlines." : "Local task context is disabled. Connect selected assignment calendars to check calendar deadlines."
+        if enabled, let planning, planning.hasAccess {
             try planning.refresh()
             let deadlines = planning.taskCandidates()
             tasks += deadlines.map { item in
