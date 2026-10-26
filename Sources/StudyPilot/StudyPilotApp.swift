@@ -122,8 +122,9 @@ struct RootView: View {
             .safeAreaInset(edge: .bottom) {
                 if let change = app.completionUndo {
                     HStack {
-                        Label(change.after.status == "Done" ? "Assignment completed" : "Assignment reopened", systemImage: "checkmark.circle")
-                        Text(change.after.title).lineLimit(1).foregroundStyle(.secondary)
+                        Label(change.completed ? "Assignment completed" : "Assignment reopened", systemImage: "checkmark.circle")
+                        Text(change.title).lineLimit(1).foregroundStyle(.secondary)
+                        if change.completed { Text("Sessions hidden; removed after Undo expires").font(.caption).foregroundStyle(.secondary) }
                         Spacer()
                         Button("Undo") { app.undoCompletion(context: context) }
                         Button { app.completionUndo = nil } label: { Image(systemName: "xmark") }.buttonStyle(.plain).accessibilityLabel("Dismiss completion confirmation")
@@ -147,16 +148,19 @@ struct RootView: View {
                 focus.tick(context: context)
                 if let change = app.completionUndo, change.expires < Date() { app.completionUndo = nil }
                 if abs(app.now.timeIntervalSinceNow) >= 30 { app.now = Date() }
-                if !updater.isBusy && !app.showingStudyPlanner { planning.checkUnfinished(context: context) }
+                if !updater.isBusy && !app.showingStudyPlanner { planning.removeFinishedTaskSessions(context: context); planning.checkUnfinished(context: context) }
             }
             .task {
                 if let folder = context.container.configurations.first?.url.deletingLastPathComponent() { planning.configure(folder: folder); chat.configure(folder: folder); chat.calendar.configure(context: context, planning: planning) }
+                app.planning = planning
+                ReminderService.shared.finishedTaskIDs = Set(planning.settings.completedTasks?.keys.map { $0 } ?? [])
+                planning.removeFinishedTaskSessions(context: context, force: true)
                 planning.checkUnfinished(context: context, force: true)
                 focus.tick(context: context)
                 await ReminderService.shared.reconcile(context: context)
                 do { try BackupService.automatic(context) } catch { app.error = "Automatic backup could not be created: \(error.localizedDescription)" }
             }
-            .onChange(of: scenePhase) { if scenePhase == .active { if !updater.isBusy && !app.showingStudyPlanner { planning.checkUnfinished(context: context, force: true) }; focus.tick(context: context); Task { await ReminderService.shared.reconcile(context: context) } } }
+            .onChange(of: scenePhase) { if scenePhase == .active { if !updater.isBusy && !app.showingStudyPlanner { planning.removeFinishedTaskSessions(context: context, force: true); planning.checkUnfinished(context: context, force: true) }; focus.tick(context: context); Task { await ReminderService.shared.reconcile(context: context) } } }
             .onChange(of: focus.error) { if let error = focus.error { app.error = error; focus.error = nil } }
             .preferredColorScheme(appearance == "Light" ? .light : appearance == "Dark" ? .dark : nil)
     }

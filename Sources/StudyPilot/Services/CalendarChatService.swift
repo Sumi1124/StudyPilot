@@ -131,10 +131,11 @@ struct CalendarChatProposal: Identifiable {
             let end = item.startDate.addingTimeInterval(Double(item.durationMinutes * 60))
             guard item.startDate < range.end && end > range.start else { return nil }
             let taskID = PlannedStudyBlock.taskID(in: item.details)
+            guard !planning.isTaskFinished(taskID) else { return nil }
             let movable = StudyBlockTracking.read(item.details).completedAt == nil && !completed.contains(taskID ?? "") && (!studyBlocksOnly || taskID != nil)
             return CalendarChatEntry(value: .init(id: "local-event:\(item.id)", title: item.title, start: item.startDate, end: end, source: "StudyPilot", subject: subject(item.title, id: item.subjectID, taskID: taskID), movable: movable, deadline: deadline(taskID, notes: item.details), taskID: taskID), local: item, external: nil, busy: true)
         }
-        result += external.map { item in
+        result += external.filter { !planning.isTaskFinished($0.ownTaskID) }.map { item in
             let movable = (item.ownTaskID != nil || !planning.settings.deadlineCalendarIDs.contains(item.calendarID)) && item.writable && !item.recurring && !item.allDay && StudyBlockTracking.read(item.notes).completedAt == nil && !completed.contains(item.ownTaskID ?? "") && (!studyBlocksOnly || item.ownTaskID != nil)
             let selectedDeadline = planning.settings.taskOverrides[item.id]?.selected == true
             let busy = item.ownTaskID != nil || (!item.free && !selectedDeadline && (planning.settings.busyCalendarIDs.contains(item.calendarID) || planning.settings.destinationID == item.calendarID))

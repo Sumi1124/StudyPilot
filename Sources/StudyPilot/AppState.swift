@@ -39,6 +39,7 @@ public enum AppSection: String, CaseIterable, Identifiable {
     var assignmentTimeFilter: AssignmentTimeFilter = .any
     var chatDraft: String?
     var completionUndo: CompletionUndo?
+    var planning: CalendarPlanningService?
     func ask(_ prompt: String) { chatDraft = prompt; section = .chat }
     func openCalendar(_ date: Date) { selectedCalendarDate = date; section = .calendar }
     func toggleCompletion(_ assignment: Assignment, context: ModelContext) {
@@ -47,34 +48,66 @@ public enum AppSection: String, CaseIterable, Identifiable {
         after.status = assignment.isDone ? TaskStatus.todo.rawValue : TaskStatus.done.rawValue
         after.completedAt = after.status == TaskStatus.done.rawValue ? Date() : nil
         assignment.apply(after)
+        if save(context, completionChanges: [after]) {
+            completionUndo = CompletionUndo(before: before, after: after, taskID: "local:\(after.id.uuidString)", title: after.title, completed: after.status == TaskStatus.done.rawValue, expires: planning?.settings.completedTasks?["local:\(after.id.uuidString)"]?.removeAfter ?? Date().addingTimeInterval(90))
+        } else { assignment.apply(before) }
+    }
+    func finishTask(id: String, title: String, context: ModelContext) {
         do {
-            try context.save()
-            completionUndo = CompletionUndo(before: before, after: after, expires: Date().addingTimeInterval(90))
-            Task { await ReminderService.shared.reconcile(context: context) }
-        } catch { assignment.apply(before); self.error = "Completion could not be saved: \(error.localizedDescription)" }
+            if let localID = StudyTaskLink.localID(id) {
+                guard let assignment = try context.fetch(FetchDescriptor<Assignment>()).first(where: { $0.id == localID }) else {
+                    throw PlanningError.invalid("The linked assignment could not be found. Your sessions were kept.")
+                }
+                if !assignment.isDone { toggleCompletion(assignment, context: context) }
+            } else {
+                guard id.hasPrefix("calendar:"), let planning else { throw PlanningError.invalid("This task cannot be completed yet.") }
+                try planning.recordTaskCompletion(id: id, title: title, completed: true)
+                ReminderService.shared.finishedTaskIDs = Set(planning.settings.completedTasks?.keys.map { $0 } ?? [])
+                Task { await ReminderService.shared.reconcile(context: context) }
+                completionUndo = CompletionUndo(before: nil, after: nil, taskID: id, title: title, completed: true, expires: planning.settings.completedTasks?[id]?.removeAfter ?? Date().addingTimeInterval(90))
+            }
+        } catch { self.error = error.localizedDescription }
     }
     func undoCompletion(context: ModelContext) {
-        guard let change = completionUndo else { return }
+        guard let change = completionUndo, change.expires > Date() else { completionUndo = nil; return }
         do {
-            guard let task = try context.fetch(FetchDescriptor<Assignment>()).first(where: { $0.id == change.after.id }), task.record == change.after else {
-                completionUndo = nil; error = "This assignment changed after completion. Your newer edit has been kept."; return
+            if let before = change.before, let after = change.after {
+                guard let task = try context.fetch(FetchDescriptor<Assignment>()).first(where: { $0.id == after.id }), task.record == after else {
+                    completionUndo = nil; error = "This assignment changed after completion. Your newer edit has been kept."; return
+                }
+                task.apply(before)
+                guard save(context, completionChanges: [before]) else { task.apply(after); return }
+            } else {
+                guard let planning else { throw PlanningError.invalid("Calendars are still opening.") }
+                try planning.recordTaskCompletion(id: change.taskID, title: change.title, completed: false)
+                ReminderService.shared.finishedTaskIDs = Set(planning.settings.completedTasks?.keys.map { $0 } ?? [])
+                Task { await ReminderService.shared.reconcile(context: context) }
             }
-            task.apply(change.before)
-            do { try context.save() } catch { task.apply(change.after); throw error }
             completionUndo = nil
-            Task { await ReminderService.shared.reconcile(context: context) }
         } catch { self.error = "Undo could not be saved: \(error.localizedDescription)" }
     }
     var error: String?
-    @discardableResult func save(_ context: ModelContext, updateReminders: Bool = true) -> Bool {
-        do { try context.save(); if updateReminders { Task { await ReminderService.shared.reconcile(context: context) } }; return true }
+    @discardableResult func save(_ context: ModelContext, updateReminders: Bool = true, completionChanges: [AssignmentRecord] = []) -> Bool {
+        do { try context.save() }
         catch { self.error = "Your changes could not be saved: \(error.localizedDescription)"; return false }
+        if let planning {
+            for task in completionChanges {
+                do { try planning.recordTaskCompletion(id: "local:\(task.id.uuidString)", title: task.title, completed: task.status == TaskStatus.done.rawValue) }
+                catch { self.error = "The assignment was saved, but linked-session cleanup could not be saved: \(error.localizedDescription)" }
+            }
+        }
+        if let planning { ReminderService.shared.finishedTaskIDs = Set(planning.settings.completedTasks?.keys.map { $0 } ?? []) }
+        if updateReminders { Task { await ReminderService.shared.reconcile(context: context) } }
+        return true
     }
 }
 
 struct CompletionUndo {
-    let before: AssignmentRecord
-    let after: AssignmentRecord
+    let before: AssignmentRecord?
+    let after: AssignmentRecord?
+    let taskID: String
+    let title: String
+    let completed: Bool
     let expires: Date
 }
 

@@ -103,7 +103,7 @@ struct AssignmentsView: View {
     private func applyBulk(_ action: AssignmentBulkAction) {
         let updates = AssignmentActions.updates(records: assignments.map(\.record), selectedIDs: selectedIDs, visibleIDs: Set(filtered.map(\.id)), action: action, now: Date())
         for record in updates { assignments.first { $0.id == record.id }?.apply(record) }
-        if app.save(context) { bulkMessage = "Updated \(updates.count) assignments."; selectedIDs.removeAll() }
+        if app.save(context, completionChanges: updates) { bulkMessage = "Updated \(updates.count) assignments."; selectedIDs.removeAll() }
         else { context.rollback(); bulkMessage = "Changes could not be saved. Please try again." }
     }
     private func openSelection() {
@@ -294,6 +294,6 @@ struct AssignmentEditor: View {
         if draft.checklist.contains(where: { $0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { validation = "Give every subtask a title, or remove the empty step."; return }
         draft.completedAt = draft.status == TaskStatus.done.rawValue ? (draft.completedAt ?? Date()) : nil
         if let assignment { assignment.apply(draft) } else { context.insert(Assignment(draft)) }
-        if app.save(context) { dismiss() }
+        if app.save(context, completionChanges: [draft]) { dismiss() }
     }
 }

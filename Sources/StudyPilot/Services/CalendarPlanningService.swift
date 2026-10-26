@@ -34,6 +34,8 @@ struct CalendarPlanningEvent: Identifiable, Equatable {
 }
 
 struct CalendarPlanningSettings: Codable {
+    var completedTasks: [String: CompletedStudyTask]?
+    var sessionEventIDs: [String: Set<String>]?
     var autoReschedule: Bool?
     var preferences = PlanningPreferences()
     var deadlineCalendarIDs: Set<String> = []
@@ -44,7 +46,10 @@ struct CalendarPlanningSettings: Codable {
 }
 
 @MainActor @Observable final class CalendarPlanningService {
-    private let store = EKEventStore()
+    let store = EKEventStore()
+    var completionCleanupMessage: String?
+    var calendarRevision = 0
+    var lastCompletionCleanup = Date.distantPast
     private var settingsURL: URL?
     var settings = CalendarPlanningSettings()
     var calendars: [ConnectedPlanningCalendar] = []
@@ -156,7 +161,7 @@ struct CalendarPlanningSettings: Codable {
         needsRefresh = true
     }
     func taskCandidates() -> [PlanningTask] {
-        events.filter { settings.deadlineCalendarIDs.contains($0.calendarID) && $0.ownTaskID == nil }.map { event in
+        events.filter { settings.deadlineCalendarIDs.contains($0.calendarID) && $0.ownTaskID == nil && !isTaskFinished($0.id) }.map { event in
             var task = PlanningTask(id: event.id, title: event.title, details: event.notes, deadline: event.deadline, selected: false)
             if let saved = settings.taskOverrides[task.id] {
                 task.minutes = saved.minutes; task.priority = saved.priority; task.steps = saved.steps; task.selected = saved.selected
@@ -191,6 +196,7 @@ struct CalendarPlanningSettings: Codable {
         try validatePreview(plan, tasks: tasks)
         working = true
         defer { working = false }
+        var published: [(String, EKEvent)] = []
         do {
             for block in plan.blocks {
                 let event = EKEvent(eventStore: store)
@@ -199,9 +205,18 @@ struct CalendarPlanningSettings: Codable {
                 event.url = URL(string: "studypilot://plan/\(block.id.uuidString)")
                 event.availability = .busy
                 try store.save(event, span: .thisEvent, commit: false)
+                published.append((block.taskID, event))
             }
             try store.commit()
         } catch { store.reset(); needsRefresh = true; throw error }
+        for (taskID, event) in published {
+            if let id = event.eventIdentifier {
+                if settings.sessionEventIDs == nil { settings.sessionEventIDs = [:] }
+                settings.sessionEventIDs?[taskID, default: []].insert(id)
+            }
+        }
+        // The events are already committed; a registry failure must not invite duplicate publication.
+        do { try saveSettings() } catch { completionCleanupMessage = "Sessions were added, but their cleanup registry could not be saved: \(error.localizedDescription)" }
         // A successful commit is final even if a subsequent refresh fails; never invite a duplicate retry.
         events = (try? readEvents()) ?? events; lastRefresh = Date()
         status = "Added \(plan.blocks.count) study blocks to \(calendar.title). Google sync is handled by macOS Calendar."
@@ -212,6 +227,7 @@ struct CalendarPlanningSettings: Codable {
         tracking.completedAt = completed ? Date() : nil
         event.details = tracking.writing(to: original)
         do { try context.save() } catch { event.details = original; throw error }
+        Task { await ReminderService.shared.reconcile(context: context) }
     }
     func setCompleted(_ completed: Bool, external snapshot: CalendarPlanningEvent) throws {
         guard let event = store.event(withIdentifier: snapshot.eventIdentifier),
@@ -225,7 +241,8 @@ struct CalendarPlanningSettings: Codable {
         event.notes = tracking.writing(to: snapshot.notes)
         do { try store.save(event, span: .thisEvent, commit: true) }
         catch { store.reset(); throw error }
-        events = try readEvents()
+        events = (try? readEvents()) ?? events
+        calendarRevision += 1
     }
     /// Runs on the main context; all mutations are synchronous so user edits cannot interleave.
     func checkUnfinished(context: ModelContext, force: Bool = false) {
@@ -249,7 +266,7 @@ struct CalendarPlanningSettings: Codable {
             for assignment in assignments {
                 taskMap["local:\(assignment.id.uuidString)"] = PlanningTask(id: "local:\(assignment.id.uuidString)", title: assignment.title, deadline: assignment.dueDate)
             }
-            let completedIDs = Set(assignments.filter { $0.status == TaskStatus.done.rawValue }.map { "local:\($0.id.uuidString)" })
+            let completedIDs = Set(assignments.filter { $0.status == TaskStatus.done.rawValue }.map { "local:\($0.id.uuidString)" }).union(settings.completedTasks?.keys.map { $0 } ?? [])
             var busy = busyTimes(excludingTasks: Set(settings.taskOverrides.values.filter(\.selected).map(\.id)).union(missedLocal.compactMap { PlannedStudyBlock.taskID(in: $0.details) }).union(missedExternal.compactMap(\.ownTaskID))).filter { $0.end > now }
             busy += local.map { PlanningBusyTime(start: $0.startDate, end: $0.startDate.addingTimeInterval(Double($0.durationMinutes * 60)), taskID: PlannedStudyBlock.taskID(in: $0.details)) }.filter { $0.end > now }
             var moved = 0, waiting = 0

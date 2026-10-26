@@ -18,8 +18,8 @@ struct TodayAgendaView: View {
     private var day: Date { Calendar.current.date(byAdding: .day, value: offset, to: Calendar.current.startOfDay(for: app.now))! }
     private var end: Date { Calendar.current.date(byAdding: .day, value: 1, to: day)! }
     private var tasks: [Assignment] { assignments.filter { !$0.isDone && $0.dueDate >= day && $0.dueDate < end } }
-    private var localEvents: [PlannerEvent] { events.filter { $0.startDate < end && $0.startDate.addingTimeInterval(Double($0.durationMinutes * 60)) > day } }
-    private var externalEvents: [CalendarPlanningEvent] { planning.events.filter { $0.start < end && $0.end > day } }
+    private var localEvents: [PlannerEvent] { events.filter { !planning.isTaskFinished(PlannedStudyBlock.taskID(in: $0.details)) && $0.startDate < end && $0.startDate.addingTimeInterval(Double($0.durationMinutes * 60)) > day } }
+    private var externalEvents: [CalendarPlanningEvent] { planning.events.filter { !planning.isTaskFinished($0.ownTaskID) && $0.start < end && $0.end > day } }
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
@@ -49,9 +49,10 @@ struct TodayAgendaView: View {
                             do { try planning.setCompleted(done, local: event, context: context) } catch { app.error = error.localizedDescription }
                         })).labelsHidden().toggleStyle(.checkbox)
                     } else { Image(systemName: event.kind == "Exam" ? "graduationcap" : "calendar").foregroundStyle(Color.pilot) }
-                    VStack(alignment: .leading, spacing: 3) { Text(event.title).font(.callout.bold()); Text("\(event.startDate.formatted(date: .omitted, time: .shortened)) · \(event.durationMinutes) min · StudyPilot").font(.caption).foregroundStyle(.secondary) }
+                    VStack(alignment: .leading, spacing: 3) { Text(event.title).font(.callout.bold()).strikethrough(StudyBlockTracking.read(event.details).completedAt != nil); Text("\(event.startDate.formatted(date: .omitted, time: .shortened)) · \(event.durationMinutes) min · StudyPilot").font(.caption).foregroundStyle(.secondary) }
                     Spacer()
                     Button("Focus") { if focus.state == nil { focus.start(minutes: min(60, max(5, event.durationMinutes)), subjectID: event.subjectID) }; app.section = .focus }
+                    if let id = PlannedStudyBlock.taskID(in: event.details) { FinishStudyTaskButton(taskID: id, title: event.title) }
                     Button("Edit") { editingEvent = event }
                 }.padding(.vertical, 4)
             }
@@ -64,6 +65,7 @@ struct TodayAgendaView: View {
                     } else { Image(systemName: "calendar").foregroundStyle(Color.pilot) }
                     VStack(alignment: .leading, spacing: 3) { Text(event.title).font(.callout.bold()); Text("\(event.allDay ? "All day" : event.start.formatted(date: .omitted, time: .shortened)) · \(planning.calendars.first { $0.id == event.calendarID }?.title ?? "Synced calendar")").font(.caption).foregroundStyle(.secondary) }
                     Spacer()
+                    if let id = event.ownTaskID { FinishStudyTaskButton(taskID: id, title: event.title) }
                     Button("Ask AI") { app.ask("Help me with the calendar event \(event.title) on \(event.start.formatted(date: .abbreviated, time: .shortened)).") }
                 }.padding(.vertical, 4)
             }

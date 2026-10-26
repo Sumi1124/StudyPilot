@@ -3,11 +3,13 @@ import Observation
 @preconcurrency import UserNotifications
 import SwiftData
 import StudyPilotData
+import StudyPilotCore
 
 @MainActor @Observable final class ReminderService {
     static let shared = ReminderService()
     var status = "Notifications have not been enabled."
     var lastError: String?
+    var finishedTaskIDs: Set<String> = []
     private var refreshing = false
     private var refreshAgain = false
     private let center = UNUserNotificationCenter.current()
@@ -35,10 +37,13 @@ import StudyPilotData
         do {
             let now = Date()
             var scheduled: [(String, String, String, Date)] = []
-            for item in try context.fetch(FetchDescriptor<Assignment>()) where item.status != "Done" {
+            let assignments = try context.fetch(FetchDescriptor<Assignment>())
+            let completed = finishedTaskIDs.union(assignments.filter { $0.status == "Done" }.map { "local:\($0.id.uuidString)" })
+            for item in assignments where item.status != "Done" {
                 if let date = item.reminderDate, date > now { scheduled.append(("plan-task-\(item.id)", item.title, "Assignment due \(item.dueDate.formatted(date: .abbreviated, time: .shortened))", date)) }
             }
             for item in try context.fetch(FetchDescriptor<PlannerEvent>()) {
+                guard StudyBlockTracking.read(item.details).completedAt == nil, !completed.contains(PlannedStudyBlock.taskID(in: item.details) ?? "") else { continue }
                 if let date = item.reminderDate, date > now { scheduled.append(("plan-event-\(item.id)", item.title, "\(item.kind) at \(item.startDate.formatted(date: .abbreviated, time: .shortened))", date)) }
             }
             for item in scheduled.sorted(by: { $0.3 < $1.3 }).prefix(48) {

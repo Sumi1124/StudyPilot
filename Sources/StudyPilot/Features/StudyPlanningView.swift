@@ -74,6 +74,7 @@ struct StudyPlanningView: View {
             saveToCalendar = !service.settings.destinationID.isEmpty
             if service.hasAccess { refresh(); showCalendars = service.settings.deadlineCalendarIDs.isEmpty } else { rebuildTasks() }
         }
+        .onChange(of: service.calendarRevision) { if configured { rebuildTasks(); plan = nil } }
         .onChange(of: assignments.map(\.record)) { _, _ in if configured { rebuildTasks(); plan = nil } }
         .onChange(of: tasks) { _, new in if new != generatedTasks { plan = nil }; service.status = nil }
         .onChange(of: service.settings.preferences) { old, new in
