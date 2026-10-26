@@ -41,12 +41,10 @@ struct PlannerCalendarView: View {
                     Button { move(1) } label: { Image(systemName: "chevron.right") }.help("Next \(mode.lowercased())")
                     Button("Today") { selected = Date() }
                     Spacer()
-                    Button("Plan my study", systemImage: "sparkles") { app.showingStudyPlanner = true }
+                    Button("Plan my study", systemImage: "calendar.badge.clock") { app.showingStudyPlanner = true }.buttonStyle(.borderedProminent)
                     Picker("View", selection: $mode) { Text("Month").tag("Month"); Text("Week").tag("Week") }.pickerStyle(.segmented).frame(width: 160)
-                    Button("Add event", systemImage: "plus") { adding = true }.buttonStyle(.borderedProminent)
+                    Button("Add event", systemImage: "plus") { adding = true }
                 }
-                DisclosureGroup("Study block checklist") { StudySessionsView() }.font(.headline)
-                syncedDay
                 VStack(spacing: 8) {
                     HStack {
                         ForEach(0..<7, id: \.self) { index in
@@ -76,6 +74,8 @@ struct PlannerCalendarView: View {
                         }
                     }
                 }.pilotCard()
+                syncedDay
+                DisclosureGroup("Study block checklist") { StudySessionsView() }.font(.headline)
             }.padding(30)
         }
         .onAppear { if let date = app.selectedCalendarDate { selected = date; app.selectedCalendarDate = nil }; refreshSynced() }
