@@ -35,11 +35,47 @@ public enum AppSection: String, CaseIterable, Identifiable {
     var selectedSubjectID: UUID?
     var selectedProjectID: UUID?
     var createNote = false
+    var selectedCalendarDate: Date?
+    var assignmentTimeFilter: AssignmentTimeFilter = .any
+    var chatDraft: String?
+    var completionUndo: CompletionUndo?
+    func ask(_ prompt: String) { chatDraft = prompt; section = .chat }
+    func openCalendar(_ date: Date) { selectedCalendarDate = date; section = .calendar }
+    func toggleCompletion(_ assignment: Assignment, context: ModelContext) {
+        let before = assignment.record
+        var after = before
+        after.status = assignment.isDone ? TaskStatus.todo.rawValue : TaskStatus.done.rawValue
+        after.completedAt = after.status == TaskStatus.done.rawValue ? Date() : nil
+        assignment.apply(after)
+        do {
+            try context.save()
+            completionUndo = CompletionUndo(before: before, after: after, expires: Date().addingTimeInterval(90))
+            Task { await ReminderService.shared.reconcile(context: context) }
+        } catch { assignment.apply(before); self.error = "Completion could not be saved: \(error.localizedDescription)" }
+    }
+    func undoCompletion(context: ModelContext) {
+        guard let change = completionUndo else { return }
+        do {
+            guard let task = try context.fetch(FetchDescriptor<Assignment>()).first(where: { $0.id == change.after.id }), task.record == change.after else {
+                completionUndo = nil; error = "This assignment changed after completion. Your newer edit has been kept."; return
+            }
+            task.apply(change.before)
+            do { try context.save() } catch { task.apply(change.after); throw error }
+            completionUndo = nil
+            Task { await ReminderService.shared.reconcile(context: context) }
+        } catch { self.error = "Undo could not be saved: \(error.localizedDescription)" }
+    }
     var error: String?
     @discardableResult func save(_ context: ModelContext, updateReminders: Bool = true) -> Bool {
         do { try context.save(); if updateReminders { Task { await ReminderService.shared.reconcile(context: context) } }; return true }
         catch { self.error = "Your changes could not be saved: \(error.localizedDescription)"; return false }
     }
+}
+
+struct CompletionUndo {
+    let before: AssignmentRecord
+    let after: AssignmentRecord
+    let expires: Date
 }
 
 extension Color {

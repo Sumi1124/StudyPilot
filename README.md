@@ -142,3 +142,15 @@ Chat can now search unfinished assignments and note titles using subject labels,
 **Use my study tasks and note titles** controls this local retrieval and remembers your choice. Assignment descriptions are included only as short matching excerpts; note bodies still require an explicit attachment. Conversation history is compacted so one long answer does not remove every earlier reference. Follow-ups such as “move it tomorrow” use recent task context; changing to science starts a new subject search.
 
 Calendar-enabled replies use Apple's guided generation instead of relying on handwritten JSON. Ordinary questions cannot select an event to move; calendar changes still require the existing reviewed Apply move flow. The underlying model remains Apple's on-device model, with its existing hardware and OS requirements.
+
+### A more usable daily workspace (1.8)
+
+- **Overview:** quick-add a task with its deadline, subject, and effort; switch Today/Tomorrow; see scheduled local/synced events; complete planned blocks; start focus; and review overdue assignments.
+- **Deadline workload:** seven-day estimated effort for unfinished assignments, separate from booked study time. Select a day to open its calendar.
+- **Assignments:** Any time / Overdue / Today / Tomorrow / Next 7 days filters, quick entry, Ask AI shortcuts, and a 90-second Undo button after completing or reopening a task. Undo refuses to overwrite a subsequent edit.
+- **Calendar:** a collapsible study checklist and selected-day synced event list, with refresh and clear sync scope.
+- **Chat:** collapsible conversation history, compact prompt shortcuts, and context settings in a popover. Replies can link back to saved tasks, notes, or calendar dates.
+
+Common questions about unfinished tasks, subject-specific task lists, overdue work, upcoming deadlines, and today's/tomorrow's calendar are answered directly from records. These answers also work without Apple Intelligence. Selected assignment-calendar deadlines are included when connected; their completion is explicitly unknown. Source cards and timestamps show what was checked. Date/subject follow-ups retain their scope and ambiguous references are left for clarification.
+
+General explanations still use Apple's on-device AI and can be wrong. Standalone tutoring questions avoid irrelevant calendar context, while questions about a student's attached or saved task can use its material. AI replies are labeled separately; their context cards describe provided material, not independent verification. Unsupported time ranges or open-ended reasoning are not labeled as direct saved-data answers.

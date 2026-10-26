@@ -24,7 +24,7 @@ struct AssignmentsView: View {
         let result = assignments.filter { item in
             (status == "All" || (status == "Active" ? !item.isDone : item.status == status)) &&
             (subjectID == nil || item.subjectID == subjectID) && (projectID == nil || item.projectID == projectID) &&
-            (search.isEmpty || "\(item.title) \(item.details)".localizedCaseInsensitiveContains(search))
+            (search.isEmpty || "\(item.title) \(item.details)".localizedCaseInsensitiveContains(search)) && app.assignmentTimeFilter.includes(item.record, now: app.now)
         }
         return result.sorted {
             switch sort {
@@ -38,6 +38,10 @@ struct AssignmentsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 PageHeading(eyebrow: "Make room for your best work", title: "Assignments", subtitle: "A clear next step for everything on your plate.")
+                QuickTaskEntry().pilotCard()
+                Picker("Deadline filter", selection: Binding(get: { app.assignmentTimeFilter }, set: { app.assignmentTimeFilter = $0 })) {
+                    ForEach(AssignmentTimeFilter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }.pickerStyle(.segmented)
                 HStack {
                     TextField("Search assignments", text: $search).textFieldStyle(.roundedBorder).frame(minWidth: 130)
                     Picker("Status", selection: $status) { ForEach(["Active", "All"] + TaskStatus.allCases.map(\.rawValue), id: \.self) { Text($0) } }.labelsHidden().frame(width: 130)
@@ -76,6 +80,7 @@ struct AssignmentsView: View {
                         AssignmentRow(assignment: assignment, subject: subjects.first { $0.id == assignment.subjectID }, edit: { editing = assignment })
                             .contextMenu {
                                 Button("Edit assignment") { editing = assignment }
+                                Button("Ask AI about this assignment") { app.ask("Help me work on my assignment \(assignment.title).") }
                                 Button("Delete assignment…", role: .destructive) { deleting = assignment }
                             }
                         }
@@ -117,9 +122,7 @@ struct AssignmentRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Button {
-                assignment.status = assignment.isDone ? TaskStatus.todo.rawValue : TaskStatus.done.rawValue
-                assignment.completedAt = assignment.isDone ? Date() : nil
-                app.save(context)
+                app.toggleCompletion(assignment, context: context)
             } label: {
                 Image(systemName: assignment.isDone ? "checkmark.circle.fill" : "circle").font(.system(size: 22, weight: .light)).foregroundStyle(assignment.isDone ? Color.pilot : .secondary)
             }.buttonStyle(.plain).help(assignment.isDone ? "Mark incomplete" : "Complete assignment").accessibilityLabel(assignment.isDone ? "Mark \(assignment.title) incomplete" : "Complete \(assignment.title)")

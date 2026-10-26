@@ -57,6 +57,10 @@ struct CalendarChatProposal: Identifiable {
         return CalendarChatSnapshot(summary: source + "\n" + text, aliases: aliases, entries: current)
     }
     func studyContext(query: String, maximumBytes: Int = 1700) throws -> (String, Int) {
+        let value = try studyBundle(query: query, maximumBytes: maximumBytes)
+        return (value.text, value.sources.count)
+    }
+    func studyBundle(query: String, maximumBytes: Int = 1700) throws -> (text: String, sources: [StudyChatSource]) {
         guard let context else { throw PlanningError.invalid("Your study workspace is still opening.") }
         let subjects = try context.fetch(FetchDescriptor<Subject>())
         let assignments = try context.fetch(FetchDescriptor<Assignment>()).filter { $0.status != TaskStatus.done.rawValue }
@@ -67,7 +71,44 @@ struct CalendarChatProposal: Identifiable {
         items += notes.prefix(2000).map { item in
             StudyContextItem(id: "note:\(item.id)", title: item.title, subject: subjects.first { $0.id == item.subjectID }?.name ?? "", kind: "Note title (attach the note to use its text)")
         }
-        return try StudyUnderstanding.summary(items: items, query: query, maximumBytes: maximumBytes)
+        let evidence = try StudyUnderstanding.evidence(items: items, query: query, maximumBytes: maximumBytes)
+        let sources = evidence.items.map { item in
+            StudyChatSource(id: item.id, title: item.title, detail: item.subject.isEmpty ? "Related topic; saved item" : item.subject, kind: item.id.hasPrefix("note:") ? "note" : "assignment", localID: UUID(uuidString: String(item.id.split(separator: ":").last ?? "")), date: item.due)
+        }
+        return (evidence.text, sources)
+    }
+    func factAnswer(_ request: WorkspaceFactRequest, useStudyContext: Bool, query: String = "") throws -> WorkspaceFactAnswer {
+        guard let context else { throw PlanningError.invalid("Your workspace is still opening.") }
+        let now = Date()
+        if case .calendar(let offset) = request {
+            guard enabled else { return .init(text: "Enable Use my calendar in Context & sources so I can check that schedule.", sources: []) }
+            let cal = Calendar.current, day = cal.date(byAdding: .day, value: offset, to: cal.startOfDay(for: now))!
+            let range = DateInterval(start: day, end: cal.date(byAdding: .day, value: 1, to: day)!)
+            let values = try entries(in: range).filter { !WorkspaceFacts.isSpecific(query) || StudyUnderstanding.score(query: query, title: $0.value.title, subject: $0.value.subject) > 0 }
+            let label = offset == 0 ? "today" : "tomorrow"
+            let scope = connected ? "StudyPilot and your selected synced calendars" : "StudyPilot only; Google/external calendars are not connected"
+            let sources = values.prefix(15).map { item in
+                StudyChatSource(id: item.value.id, title: item.value.title, detail: (item.external?.allDay == true ? "All day" : item.value.start.formatted(date: .abbreviated, time: .shortened)) + " · " + item.value.source, kind: item.local == nil && item.external == nil ? "assignment" : "calendar", localID: item.local?.id ?? UUID(uuidString: String(item.value.id.split(separator: ":").last ?? "")), date: item.value.start)
+            }
+            let lines = sources.map { "• \($0.title) — \($0.detail)" }.joined(separator: "\n")
+            return .init(text: values.isEmpty ? "No events or deadlines found for \(label) in \(scope)." : "\(values.count) events or deadlines for \(label) in \(scope):\n\n" + lines + (values.count > 15 ? "\n\nShowing the first 15. Open Calendar for more." : ""), sources: sources)
+        }
+        guard useStudyContext else { return .init(text: "Enable Use my study tasks in Context & sources so I can check saved assignments.", sources: []) }
+        let subjects = try context.fetch(FetchDescriptor<Subject>())
+        var tasks = try context.fetch(FetchDescriptor<Assignment>()).map { item in WorkspaceFactTask(record: item.record, subject: subjects.first { $0.id == item.subjectID }?.name ?? "") }
+        var scope = "Only saved StudyPilot assignments were checked. Connect and select assignment calendars to include Google deadlines."
+        if let planning, planning.hasAccess {
+            try planning.refresh()
+            let deadlines = planning.taskCandidates()
+            tasks += deadlines.map { item in
+                let calendarName = planning.events.first(where: { $0.id == item.id }).flatMap { event in planning.calendars.first { $0.id == event.calendarID }?.title } ?? "Synced calendar"
+                let source = StudyChatSource(id: item.id, title: item.title, detail: "Due \(item.deadline.formatted(date: .abbreviated, time: .shortened)) · \(calendarName) · calendar deadline; completion not tracked", kind: "calendar", date: item.deadline)
+                return WorkspaceFactTask(record: AssignmentRecord(title: item.title, details: item.details, dueDate: item.deadline), subject: StudyUnderstanding.subjectHint(title: item.title), calendarSource: source)
+            }
+            scope = "Calendar deadlines checked in the planner window: last 7 days through the next \(planning.settings.preferences.days) days, from selected assignment calendars. Google updates depend on macOS Calendar sync."
+        }
+        let answer = WorkspaceFacts.taskAnswer(request, tasks: tasks, now: now, query: query) ?? .init(text: "I couldn't check that request. Please try a specific task or date.", sources: [])
+        return .init(text: answer.text + "\n\n" + scope, sources: answer.sources)
     }
     private func entries(in range: DateInterval) throws -> [CalendarChatEntry] {
         guard let context, let planning else { throw PlanningError.invalid("The calendar is still opening. Try again in a moment.") }

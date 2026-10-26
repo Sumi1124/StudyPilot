@@ -119,6 +119,17 @@ struct RootView: View {
                     }
                 }
         }.disabled(updater.isBusy)
+            .safeAreaInset(edge: .bottom) {
+                if let change = app.completionUndo {
+                    HStack {
+                        Label(change.after.status == "Done" ? "Assignment completed" : "Assignment reopened", systemImage: "checkmark.circle")
+                        Text(change.after.title).lineLimit(1).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Undo") { app.undoCompletion(context: context) }
+                        Button { app.completionUndo = nil } label: { Image(systemName: "xmark") }.buttonStyle(.plain).accessibilityLabel("Dismiss completion confirmation")
+                    }.padding(12).background(.regularMaterial).disabled(updater.isBusy)
+                }
+            }
             .frame(minWidth: 960, minHeight: 700)
             .sheet(isPresented: $app.showingAssignment) { AssignmentEditor() }
             .sheet(isPresented: $app.showingSearch) { CommandPalette() }
@@ -134,6 +145,7 @@ struct RootView: View {
             .onReceive(NotificationCenter.default.publisher(for: .studyPilotQueryFailed)) { notice in app.error = notice.userInfo?["message"] as? String }
             .onReceive(ticks) { _ in
                 focus.tick(context: context)
+                if let change = app.completionUndo, change.expires < Date() { app.completionUndo = nil }
                 if abs(app.now.timeIntervalSinceNow) >= 30 { app.now = Date() }
                 if !updater.isBusy && !app.showingStudyPlanner { planning.checkUnfinished(context: context) }
             }

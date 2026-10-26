@@ -86,6 +86,15 @@ public enum StudyUnderstanding {
         let response = messages.dropLast().last(where: { $0.role == "assistant" }).map { String($0.text.prefix(350)) } ?? ""
         return ([current.text] + previous + [response]).joined(separator: "\n")
     }
+    public static func isLearningQuestion(_ text: String) -> Bool {
+        let words = Set(tokens(text)), normalized = tokens(text).joined(separator: " ")
+        if requestsMove(messages: [.init(role: "user", text: text)]) || !words.isDisjoint(with: ["calendar", "schedule", "deadline", "deadlines", "overdue"]) { return false }
+        return !words.isDisjoint(with: ["help", "explain", "teach", "solve", "factor", "simplify", "calculate", "derive", "differentiate", "integrate", "prove", "verify", "quiz", "review", "feedback", "summarize", "summarise", "why", "correct"]) || normalized.contains("how does") || normalized.contains("check my working") || normalized.contains("help me understand")
+    }
+    public static func needsSavedStudyContext(_ text: String) -> Bool {
+        if !isLearningQuestion(text) { return true }
+        return !Set(tokens(text)).isDisjoint(with: ["my", "our", "task", "assignment", "note", "notes", "attached", "it", "that", "this"])
+    }
     public static func requestsMove(messages: [StudyChatMessage]) -> Bool {
         guard let last = messages.last(where: { $0.role == "user" }) else { return false }
         let normalized = tokens(last.text).joined(separator: " ")
@@ -114,17 +123,22 @@ public enum StudyUnderstanding {
             }.map(\.0)
     }
     public static func summary(items: [StudyContextItem], query: String, maximumBytes: Int = 1700) throws -> (String, Int) {
+        let value = try evidence(items: items, query: query, maximumBytes: maximumBytes)
+        return (value.text, value.items.count)
+    }
+    public static func evidence(items: [StudyContextItem], query: String, maximumBytes: Int = 1700) throws -> (text: String, items: [StudyContextItem]) {
         let matches = ranked(items, query: query)
         let formatter = DateFormatter(); formatter.dateFormat = "yyyy-MM-dd HH:mm"; formatter.locale = Locale(identifier: "en_US_POSIX")
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         var rows: [[String: String]] = []
+        var included: [StudyContextItem] = []
         for item in matches.prefix(8) {
             var row = ["title": String(item.title.prefix(110)), "kind": item.kind, "subject": subjectHint(title: item.title, subject: item.subject)]
             if let due = item.due { row["due"] = formatter.string(from: due) }
             if !item.details.isEmpty { row["details"] = String(item.details.prefix(160)) }
             guard try encoder.encode(rows + [row]).count <= maximumBytes else { break }
-            rows.append(row)
+            rows.append(row); included.append(item)
         }
-        return ("RELEVANT STUDY ITEMS. Found \(matches.count) likely matches; included \(rows.count). These are real saved titles and subject labels. Inferred topics are suggestions, not changes to saved subjects. Assignments are deadlines, not movable study sessions.\n" + String(decoding: try encoder.encode(rows), as: UTF8.self), rows.count)
+        return ("RELEVANT STUDY ITEMS. Found \(matches.count) likely matches; included \(rows.count). These are real saved titles and subject labels. Inferred topics are suggestions, not changes to saved subjects. Assignments are deadlines, not movable study sessions.\n" + String(decoding: try encoder.encode(rows), as: UTF8.self), included)
     }
 }

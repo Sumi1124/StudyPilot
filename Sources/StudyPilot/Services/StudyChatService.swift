@@ -64,10 +64,17 @@ import FoundationModels
     func stop() {
         requestID = nil; request?.cancel(); request = nil; generating = false; calendar.pending = nil
     }
-    @discardableResult func send(_ text: String, context: String) -> Bool {
+    func canAnswerFacts(_ text: String) -> Bool {
+        WorkspaceFacts.request(text, followingWorkspaceAnswer: selected?.messages.last(where: { $0.role == "assistant" })?.answerKind == "workspace", previousScope: selected?.messages.last(where: { $0.role == "assistant" })?.factScope) != nil
+    }
+    @discardableResult func send(_ text: String, context: String, attachmentSource: StudyChatSource? = nil) -> Bool {
         guard !generating else { return false }
         error = nil
-        if let reason = unavailableReason { error = reason; return false }
+        let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty, cleaned.count <= 2000, context.count <= 1800 else { error = "Write a message of up to 2,000 characters."; return false }
+        let factQuery = WorkspaceFacts.followupQuery(cleaned, sources: selected?.messages.last(where: { $0.role == "assistant" })?.sources ?? [])
+        let factRequest = factQuery == nil ? nil : WorkspaceFacts.request(cleaned, followingWorkspaceAnswer: selected?.messages.last(where: { $0.role == "assistant" })?.answerKind == "workspace", previousScope: selected?.messages.last(where: { $0.role == "assistant" })?.factScope)
+        if factRequest == nil, let reason = unavailableReason { error = reason; return false }
         if selected == nil { newChat() }
         guard let index = threads.firstIndex(where: { $0.id == selectedID }) else { return false }
         guard threads[index].messages.count < 199 else { error = "This conversation is full. Start a new chat to continue."; return false }
@@ -77,26 +84,43 @@ import FoundationModels
         if threads[index].messages.count == 1 { threads[index].title = String(message.text.prefix(60)) }
         threads[index].updatedAt = Date()
         do {
+            calendar.pending = nil
+            if let factRequest {
+                let answer = try calendar.factAnswer(factRequest, useStudyContext: useStudyContext, query: factQuery ?? cleaned)
+                threads[index].messages.append(.init(role: "assistant", text: answer.text, sources: answer.sources, answerKind: "workspace", factScope: factRequest.scope))
+                try save(); contextStatus = "Answered directly from saved workspace data"; return true
+            }
             let query = StudyUnderstanding.query(messages: threads[index].messages)
-            let snapshot = try calendar.snapshot(query: query)
-            let study = useStudyContext ? try calendar.studyContext(query: query) : nil
-            contextStatus = study.map { "\($0.1) relevant study items included · task details and note titles stay on this Mac" }
-            let prompt = try StudyChat.prompt(messages: threads[index].messages, calendarSnapshot: snapshot?.summary, studySnapshot: study?.0)
+            let learning = StudyUnderstanding.isLearningQuestion(cleaned)
+            let snapshot = learning ? nil : try calendar.snapshot(query: query)
+            let study = useStudyContext && StudyUnderstanding.needsSavedStudyContext(cleaned) ? try calendar.studyBundle(query: query) : nil
+            contextStatus = study.map { "\($0.sources.count) relevant study items included · task details and note titles stay on this Mac" } ?? (learning ? "Study help · calendar context was not needed for this question" : nil)
+            let prompt = try StudyChat.prompt(messages: threads[index].messages, calendarSnapshot: snapshot?.summary, studySnapshot: study?.text)
             try save()
-            generate(prompt: prompt, threadID: threads[index].id, snapshot: snapshot)
+            generate(prompt: prompt, threadID: threads[index].id, snapshot: snapshot, sources: evidence(study: study?.sources ?? [], snapshot: snapshot, attachment: attachmentSource))
             return true
         } catch { threads = previous; self.error = error.localizedDescription; return false }
     }
     func retry() {
         guard !generating, let thread = selected, thread.messages.last?.role == "user" else { return }
-        if let reason = unavailableReason { error = reason; return }
+        if WorkspaceFacts.request(thread.messages.last?.text ?? "") == nil, let reason = unavailableReason { error = reason; return }
         do {
             error = nil
+            if let request = WorkspaceFacts.request(thread.messages.last?.text ?? "") {
+                let answer = try calendar.factAnswer(request, useStudyContext: useStudyContext, query: thread.messages.last?.text ?? "")
+                if let index = threads.firstIndex(where: { $0.id == thread.id }) {
+                    threads[index].messages.append(.init(role: "assistant", text: answer.text, sources: answer.sources, answerKind: "workspace", factScope: request.scope))
+                    do { try save() } catch { threads[index].messages.removeLast(); throw error }
+                }
+                return
+            }
             let query = StudyUnderstanding.query(messages: thread.messages)
-            let snapshot = try calendar.snapshot(query: query)
-            let study = useStudyContext ? try calendar.studyContext(query: query) : nil
-            contextStatus = study.map { "\($0.1) relevant study items included · task details and note titles stay on this Mac" }
-            generate(prompt: try StudyChat.prompt(messages: thread.messages, calendarSnapshot: snapshot?.summary, studySnapshot: study?.0), threadID: thread.id, snapshot: snapshot)
+            let text = thread.messages.last?.text ?? ""
+            let learning = StudyUnderstanding.isLearningQuestion(text)
+            let snapshot = learning ? nil : try calendar.snapshot(query: query)
+            let study = useStudyContext && StudyUnderstanding.needsSavedStudyContext(text) ? try calendar.studyBundle(query: query) : nil
+            contextStatus = study.map { "\($0.sources.count) relevant study items included · task details and note titles stay on this Mac" } ?? (learning ? "Study help · calendar context was not needed for this question" : nil)
+            generate(prompt: try StudyChat.prompt(messages: thread.messages, calendarSnapshot: snapshot?.summary, studySnapshot: study?.text), threadID: thread.id, snapshot: snapshot, sources: evidence(study: study?.sources ?? [], snapshot: snapshot, attachment: nil))
         }
         catch { self.error = error.localizedDescription }
     }
@@ -110,7 +134,16 @@ import FoundationModels
             }
         } catch { self.error = error.localizedDescription }
     }
-    private func generate(prompt: String, threadID: UUID, snapshot: CalendarChatSnapshot?) {
+    private func evidence(study: [StudyChatSource], snapshot: CalendarChatSnapshot?, attachment: StudyChatSource?) -> [StudyChatSource] {
+        var values = attachment.map { [$0] } ?? []
+        values += study
+        values += snapshot?.entries.filter { item in snapshot?.aliases.values.contains(where: { $0.id == item.value.id }) == true }.map { item in
+            StudyChatSource(id: item.value.id, title: item.value.title, detail: item.value.start.formatted(date: .abbreviated, time: .shortened) + " · " + item.value.source, kind: "calendar", localID: item.local?.id, date: item.value.start)
+        } ?? []
+        var seen = Set<String>()
+        return Array(values.filter { seen.insert($0.id).inserted }.prefix(24))
+    }
+    private func generate(prompt: String, threadID: UUID, snapshot: CalendarChatSnapshot?, sources: [StudyChatSource]) {
         let id = UUID(); requestID = id; generating = true
         request = Task {
             defer { if requestID == id { generating = false; requestID = nil; request = nil } }
@@ -127,7 +160,7 @@ import FoundationModels
                         do { try calendar.propose(move, snapshot: snapshot, threadID: threadID) }
                         catch { reply += "\n\nNo changes made: " + error.localizedDescription }
                     }
-                    threads[index].messages.append(StudyChatMessage(role: "assistant", text: reply)); threads[index].updatedAt = Date()
+                    threads[index].messages.append(StudyChatMessage(role: "assistant", text: reply, sources: sources, answerKind: "ai")); threads[index].updatedAt = Date()
                     do { try save() } catch { self.error = "The reply is visible but could not be saved: \(error.localizedDescription)" }
                 } else { throw PlanningError.invalid(unavailableReason ?? "AI chat is unavailable.") }
                 #else

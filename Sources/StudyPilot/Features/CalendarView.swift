@@ -6,6 +6,7 @@ import StudyPilotData
 struct PlannerCalendarView: View {
     @Environment(\.modelContext) private var context
     @Environment(AppState.self) private var app
+    @Environment(CalendarPlanningService.self) private var planning
     @LiveQuery(sort: \Assignment.dueDate) private var assignments: [Assignment]
     @LiveQuery(sort: \PlannerEvent.startDate) private var events: [PlannerEvent]
     @LiveQuery(sort: \Subject.name) private var subjects: [Subject]
@@ -14,6 +15,9 @@ struct PlannerCalendarView: View {
     @State private var adding = false
     @State private var editingEvent: PlannerEvent?
     @State private var editingTask: Assignment?
+    @State private var synced: [CalendarPlanningEvent] = []
+    @State private var syncError: String?
+    @State private var syncedAt: Date?
     @State private var deleting: PlannerEvent?
     private let calendar = Calendar.current
     private var days: [Date] {
@@ -30,7 +34,7 @@ struct PlannerCalendarView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                PageHeading(eyebrow: "See the bigger picture", title: "Calendar", subtitle: "Deadlines, exams, and time to make it happen. Drag an item to another day to reschedule.")
+                PageHeading(eyebrow: "See the bigger picture", title: "Calendar", subtitle: "Your local deadlines and events. Selected synced calendars are listed below for the chosen day.")
                 HStack(spacing: 16) {
                     Button { move(-1) } label: { Image(systemName: "chevron.left") }.help("Previous \(mode.lowercased())")
                     Text(selected, format: .dateTime.month(.wide).year()).font(.title3.bold()).frame(minWidth: 180)
@@ -41,7 +45,8 @@ struct PlannerCalendarView: View {
                     Picker("View", selection: $mode) { Text("Month").tag("Month"); Text("Week").tag("Week") }.pickerStyle(.segmented).frame(width: 160)
                     Button("Add event", systemImage: "plus") { adding = true }.buttonStyle(.borderedProminent)
                 }
-                StudySessionsView()
+                DisclosureGroup("Study block checklist") { StudySessionsView() }.font(.headline)
+                syncedDay
                 VStack(spacing: 8) {
                     HStack {
                         ForEach(0..<7, id: \.self) { index in
@@ -73,6 +78,9 @@ struct PlannerCalendarView: View {
                 }.pilotCard()
             }.padding(30)
         }
+        .onAppear { if let date = app.selectedCalendarDate { selected = date; app.selectedCalendarDate = nil }; refreshSynced() }
+        .onChange(of: selected) { refreshSynced() }
+        .onChange(of: app.selectedCalendarDate) { if let date = app.selectedCalendarDate { selected = date; app.selectedCalendarDate = nil } }
         .sheet(isPresented: $adding) { EventEditor(date: selected) }
         .sheet(item: $editingEvent) { EventEditor(event: $0) }
         .sheet(item: $editingTask) { AssignmentEditor(assignment: $0) }
@@ -80,6 +88,34 @@ struct PlannerCalendarView: View {
             Button("Cancel", role: .cancel) { deleting = nil }
             Button("Delete", role: .destructive) { if let deleting { context.delete(deleting); app.save(context) }; deleting = nil }
         } message: { Text("The event and its reminder will be removed.") }
+    }
+    private var syncedDay: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack { Text("Synced calendars · \(selected.formatted(date: .abbreviated, time: .omitted))").font(.headline); Spacer(); Button("Refresh") { refreshSynced() }.disabled(!planning.hasAccess) }
+            if !planning.hasAccess {
+                Text("Connect calendars to see Google events here.").foregroundStyle(.secondary)
+                Button("Connect calendars") { app.showingStudyPlanner = true }
+            } else if synced.isEmpty { Text("No events from your selected synced calendars on this day.").foregroundStyle(.secondary) }
+            ForEach(synced.prefix(100)) { event in
+                HStack {
+                    Image(systemName: "calendar").foregroundStyle(Color.pilot)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(event.title).font(.callout.bold())
+                        Text("\(event.allDay ? "All day" : event.start.formatted(date: .abbreviated, time: .shortened)) · \(planning.calendars.first { $0.id == event.calendarID }?.title ?? "Calendar")").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Ask AI") { app.ask("Help me with the calendar event \(event.title) on \(event.start.formatted(date: .abbreviated, time: .shortened)).") }
+                }.padding(.vertical, 4)
+            }
+            if let syncedAt { Text("Read from this Mac at \(syncedAt.formatted(date: .omitted, time: .shortened)). Google changes follow macOS Calendar sync.").font(.caption).foregroundStyle(.secondary) }
+            if let syncError { Text(syncError).font(.caption).foregroundStyle(.red) }
+        }.pilotCard()
+    }
+    private func refreshSynced() {
+        guard planning.hasAccess else { synced = []; return }
+        let start = calendar.startOfDay(for: selected), end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: selected))!
+        do { synced = try planning.chatEvents(in: DateInterval(start: start, end: end)); syncedAt = Date(); syncError = nil }
+        catch { syncError = error.localizedDescription; synced = [] }
     }
     private func subject(_ id: UUID?) -> Subject? { subjects.first { $0.id == id } }
     private func move(_ value: Int) { selected = calendar.date(byAdding: mode == "Month" ? .month : .weekOfYear, value: value, to: selected) ?? selected }
