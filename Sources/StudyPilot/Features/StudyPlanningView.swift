@@ -12,9 +12,6 @@ struct StudyPlanningView: View {
     @Environment(CalendarPlanningService.self) private var service
     @State private var tasks: [PlanningTask] = []
     @State private var plan: StudyPlan?
-    @State private var aiTaskID: String?
-    @State private var aiRequest: Task<Void, Never>?
-    @State private var aiRequestID: UUID?
     @State private var previewAssignments: [AssignmentRecord] = []
     @State private var previewEvents: [PlannerEventRecord] = []
     @State private var generatedTasks: [PlanningTask] = []
@@ -40,7 +37,7 @@ struct StudyPlanningView: View {
     private var estimateIssue: String? {
         selectedTasks.contains { !(5...2400).contains($0.minutes) } ? "Enter between 5 and 2,400 remaining minutes for each selected assignment." : nil
     }
-    private var busy: Bool { service.working || aiTaskID != nil }
+    private var busy: Bool { service.working }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -85,7 +82,6 @@ struct StudyPlanningView: View {
         .onChange(of: service.settings.busyCalendarIDs) { _, _ in plan = nil }
         .onChange(of: service.settings.destinationID) { _, _ in plan = nil }
         .interactiveDismissDisabled(busy)
-        .onDisappear { aiRequest?.cancel() }
     }
     private var header: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -203,11 +199,8 @@ struct StudyPlanningView: View {
                     Text("min").font(.callout).foregroundStyle(.secondary)
                     Spacer()
                     Picker("Priority", selection: binding.priority) { Text("Low").tag(0); Text("Normal").tag(1); Text("High").tag(2) }.frame(width: 160)
-                    Button(aiTaskID == task.id ? "Thinking…" : "Suggest effort", systemImage: "sparkles") { suggest(task) }.disabled(busy || StudyPlanningAI.unavailableReason != nil).help(StudyPlanningAI.unavailableReason ?? "Suggest a time estimate and steps using Apple's local AI")
                 }.padding(.leading, 22)
-                if !task.steps.isEmpty {
-                    DisclosureGroup("Suggested steps") { Text(task.steps.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")).font(.callout).foregroundStyle(.secondary).textSelection(.enabled).padding(.top, 8) }.padding(.leading, 22)
-                }
+
             }
         }.padding(14).background(task.selected ? Color.pilot.opacity(0.055) : Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 12))
     }
@@ -344,7 +337,6 @@ struct StudyPlanningView: View {
                     Text(savedMessage != nil ? "Your schedule is ready in Calendar." : (step == 2 && plan != nil ? "Only the previewed sessions will be added." : "Preview first. Save when you're happy with the plan.")).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                if aiTaskID != nil { Button("Cancel suggestion") { aiRequest?.cancel(); aiRequestID = nil; aiTaskID = nil } }
                 if savedMessage == nil {
                     if step > 0 { Button("Back") { step -= 1 }.disabled(busy) }
                     if step == 0 {
@@ -384,7 +376,8 @@ struct StudyPlanningView: View {
         candidates += assignments.filter { !$0.isDone }.map { PlanningTask(id: "local:\($0.id.uuidString)", title: $0.title, details: $0.details, deadline: $0.dueDate, minutes: max(5, $0.estimatedMinutes), priority: $0.priority) }
         tasks = candidates.map { item in
             var item = item
-            if let saved = previous[item.id] ?? service.settings.taskOverrides[item.id] { item.minutes = saved.minutes; item.priority = saved.priority; item.steps = saved.steps; item.selected = saved.selected }
+            if let saved = previous[item.id] ?? service.settings.taskOverrides[item.id] { item.minutes = saved.minutes; item.priority = saved.priority; item.selected = saved.selected }
+            item.steps = []
             return item
         }.sorted { $0.deadline < $1.deadline }
     }
@@ -392,19 +385,6 @@ struct StudyPlanningView: View {
     private func refresh() {
         plan = nil; service.error = nil
         do { try service.refresh(); rebuildTasks() } catch { service.error = error.localizedDescription }
-    }
-    private func suggest(_ task: PlanningTask) {
-        aiTaskID = task.id; service.error = nil
-        let requestID = UUID(); aiRequestID = requestID
-        aiRequest = Task {
-            defer { if aiRequestID == requestID { aiTaskID = nil; aiRequestID = nil } }
-            do {
-                let suggestion = try await StudyPlanningAI.suggest(for: task)
-                try Task.checkCancellation()
-                guard let index = tasks.firstIndex(where: { $0.id == task.id }) else { return }
-                tasks[index].minutes = suggestion.minutes; tasks[index].steps = suggestion.steps
-            } catch { if !Task.isCancelled { service.error = error.localizedDescription } }
-        }
     }
     private func databaseSnapshot() throws -> ([AssignmentRecord], [PlannerEventRecord]) {
         (try context.fetch(FetchDescriptor<Assignment>()).map(\.record).sorted { $0.id.uuidString < $1.id.uuidString },
@@ -427,7 +407,6 @@ struct StudyPlanningView: View {
         } catch { service.error = error.localizedDescription }
     }
     private func validate(_ value: StudyPlan) throws {
-        guard aiTaskID == nil else { throw PlanningError.invalid("Wait for the AI suggestion, then regenerate the preview.") }
         let snapshot = try databaseSnapshot()
         guard snapshot.0 == previewAssignments && snapshot.1 == previewEvents else { throw PlanningError.invalid("Your StudyPilot workspace changed. Generate a fresh plan before saving.") }
         try service.validatePreview(value, tasks: tasks)

@@ -165,10 +165,6 @@ struct AssignmentEditor: View {
     @State private var reminder: Bool
     @State private var newStep = ""
     @State private var validation: String?
-    @State private var aiWorking = false
-    @State private var aiMessage: String?
-    @State private var aiRequestID: UUID?
-    @State private var aiRequest: Task<Void, Never>?
     init(assignment: Assignment? = nil, date: Date? = nil) {
         self.assignment = assignment
         let record = assignment?.record ?? AssignmentRecord(dueDate: date ?? Calendar.current.date(byAdding: .day, value: 1, to: Date())!)
@@ -205,26 +201,6 @@ struct AssignmentEditor: View {
                     DatePicker("Reminder", selection: Binding(get: { draft.reminderDate ?? draft.dueDate.addingTimeInterval(-3600) }, set: { draft.reminderDate = $0 }))
                     Text("Notifications require permission in StudyPilot Settings.").font(.caption).foregroundStyle(.secondary)
                 }
-                Section("AI study help") {
-                    if let reason = StudyPlanningAI.unavailableReason {
-                        Text(reason).font(.caption).foregroundStyle(.secondary)
-                    } else {
-                        Text("Ask Apple Intelligence on this Mac to suggest small, editable steps from the assignment title and description. Your time estimate stays unchanged.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    HStack {
-                        Button {
-                            suggestSteps()
-                        } label: {
-                            Label(aiWorking ? "Suggesting steps…" : "Suggest checklist steps", systemImage: "sparkles")
-                        }
-                        .disabled(aiWorking || StudyPlanningAI.unavailableReason != nil || draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        if aiWorking { ProgressView().controlSize(.small) }
-                    }
-                    if let aiMessage {
-                        Text(aiMessage).font(.caption).foregroundStyle(aiMessage.hasPrefix("Added") || aiMessage.hasPrefix("No new steps") ? Color.primary.opacity(0.65) : Color.red)
-                    }
-                }
                 Section("Small steps") {
                     ForEach($draft.checklist) { $step in
                         HStack {
@@ -242,46 +218,6 @@ struct AssignmentEditor: View {
             }.formStyle(.grouped)
             SheetActions(title: "Save assignment", disabled: draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, cancel: { dismiss() }, save: save)
         }.frame(width: 620, height: 820)
-            .onDisappear { aiRequest?.cancel() }
-    }
-    private func suggestSteps() {
-        guard !aiWorking else { return }
-        let requestID = UUID()
-        aiRequestID = requestID
-        aiWorking = true
-        aiMessage = nil
-        let task = PlanningTask(
-            id: "assignment-editor:\(draft.id.uuidString)",
-            title: draft.title,
-            details: draft.details,
-            deadline: draft.dueDate,
-            minutes: draft.estimatedMinutes,
-            priority: draft.priority
-        )
-        aiRequest = Task { @MainActor in
-            defer {
-                if aiRequestID == requestID {
-                    aiWorking = false
-                    aiRequestID = nil
-                    aiRequest = nil
-                }
-            }
-            do {
-                let suggestion = try await StudyPlanningAI.suggest(for: task)
-                guard !Task.isCancelled, aiRequestID == requestID else { return }
-                var existing = Set(draft.checklist.map { $0.title.trimmingCharacters(in: .whitespacesAndNewlines).localizedLowercase })
-                let additions = suggestion.steps.compactMap { step -> String? in
-                    let title = step.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !title.isEmpty, existing.insert(title.localizedLowercase).inserted else { return nil }
-                    return title
-                }
-                draft.checklist.append(contentsOf: additions.map { ChecklistItem(title: $0) })
-                aiMessage = additions.isEmpty ? "No new steps to add; the suggestions already match your checklist." : "Added \(additions.count) editable step\(additions.count == 1 ? "" : "s"). Review them before saving."
-            } catch {
-                guard aiRequestID == requestID else { return }
-                aiMessage = error.localizedDescription
-            }
-        }
     }
     private func addStep() {
         let title = newStep.trimmingCharacters(in: .whitespacesAndNewlines)
