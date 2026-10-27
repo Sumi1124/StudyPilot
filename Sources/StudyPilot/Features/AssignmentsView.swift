@@ -119,7 +119,9 @@ struct AssignmentRow: View {
     @Bindable var assignment: Assignment
     let subject: Subject?
     let edit: () -> Void
+    @State private var expanded = false
     var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
         HStack(spacing: 14) {
             Button {
                 app.toggleCompletion(assignment, context: context)
@@ -132,7 +134,6 @@ struct AssignmentRow: View {
                     HStack(spacing: 12) {
                         SubjectBadge(subject: subject)
                         if !assignment.criteria.isEmpty { Text("Criterion " + assignment.criteria.joined(separator: ", ")).font(.caption).foregroundStyle(.secondary) }
-                        if !assignment.checklist.isEmpty { Text("\(assignment.checklist.filter(\.isComplete).count)/\(assignment.checklist.count) steps").font(.caption).foregroundStyle(.secondary) }
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
             }.buttonStyle(.plain)
@@ -150,7 +151,33 @@ struct AssignmentRow: View {
                     Text(assignment.status).foregroundStyle(.secondary)
                 }.font(.system(size: 10, weight: .medium))
             }
-        }.padding(.vertical, 15)
+        }.padding(.vertical, 12)
+        if !assignment.checklist.isEmpty {
+            DisclosureGroup(isExpanded: $expanded) {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(assignment.checklist) { item in
+                        Toggle(isOn: Binding(get: { assignment.checklist.first { $0.id == item.id }?.isComplete ?? false }, set: { completed in
+                            updateChecklist(item.id, completed: completed)
+                        })) { Text(item.title).strikethrough(item.isComplete).foregroundStyle(item.isComplete ? .secondary : .primary) }.toggleStyle(.checkbox)
+                    }
+                    Text("Finish the assignment separately when all your work is done.").font(.caption).foregroundStyle(.secondary)
+                }.padding(.vertical, 10)
+            } label: {
+                HStack(spacing: 10) {
+                    Text("Checklist · \(assignment.checklist.filter(\.isComplete).count) of \(assignment.checklist.count)").font(.caption)
+                    ProgressView(value: Double(assignment.checklist.filter(\.isComplete).count), total: Double(assignment.checklist.count)).frame(width: 90)
+                }
+            }.padding(.leading, 36).padding(.bottom, 12)
+        }
+        }
+    }
+    private func updateChecklist(_ id: UUID, completed: Bool) {
+        let before = assignment.record
+        do {
+            let after = try AssignmentChecklist.setting(before, itemID: id, completed: completed)
+            assignment.apply(after)
+            if !app.save(context, updateReminders: false) { assignment.apply(before) }
+        } catch { app.error = error.localizedDescription }
     }
 }
 

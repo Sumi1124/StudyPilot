@@ -31,6 +31,7 @@ struct CalendarPlanningEvent: Identifiable, Equatable {
 }
 
 struct CalendarPlanningSettings: Codable {
+    var routines: [StudyRoutine]?
     var completedTasks: [String: CompletedStudyTask]?
     var sessionEventIDs: [String: Set<String>]?
     var autoReschedule: Bool?

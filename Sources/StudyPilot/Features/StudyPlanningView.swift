@@ -208,6 +208,7 @@ struct StudyPlanningView: View {
         @Bindable var service = service
         return VStack(alignment: .leading, spacing: 18) {
             sectionTitle("When do you like to study?", detail: "We'll fit sessions inside these hours and around your calendar.")
+            StudyRoutinesView()
             VStack(alignment: .leading, spacing: 18) {
                 Picker("Plan ahead", selection: $service.settings.preferences.days) { Text("7 days").tag(7); Text("14 days").tag(14); Text("28 days").tag(28) }.frame(width: 240)
                 Divider()

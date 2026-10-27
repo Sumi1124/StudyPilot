@@ -168,3 +168,11 @@ Sessions disappear from StudyPilot immediately. Actual deletion waits for the 90
 ### Manual assignment steps (1.9.1)
 
 Removed generated checklist steps from the assignment editor and the effort/step suggestion controls from Plan my study. Add your own checklist items and enter remaining minutes yourself. New study plans no longer copy earlier suggested steps into session notes. Existing assignment checklists and already-saved session notes are preserved. AI Chat remains available as a separate, explicit action; calendar scheduling, completion checkboxes, and finished-task cleanup continue to work.
+
+### Weekly agenda and study routines (1.10)
+
+Calendar opens with a seven-day **Agenda** starting on the selected date. A fixed header provides date navigation, search by event/task title or saved subject, and Hide completed. Local deadlines and events plus selected synced calendar entries share each day's list in time order, with all-day entries first. Overnight events appear on both affected days. Summary totals separate local deadlines from calendar events and timed-event minutes; they include classes and commitments, not just study sessions. The month/week grid continues to show StudyPilot items, with synced details in the selected day's agenda. Your view and completed filter are remembered.
+
+Assignment rows now have expandable **manual checklists**. Tick individual items without opening the editor; completing a checklist does not automatically finish the assignment or clear its sessions.
+
+In Plan my study → Study time, expand **My study routines** to save up to five named sets of study days, hours, session/break lengths, planning horizon and daily limit. Use applies a routine and requires a fresh preview. Saving the same name updates that routine. Removing a saved routine keeps your current hours. Routines do not change automatic-rescheduling preferences or calendar selections. No suggested steps are generated.
