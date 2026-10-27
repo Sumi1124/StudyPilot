@@ -182,3 +182,7 @@ In Plan my study → Study time, expand **My study routines** to save up to five
 Overview is now **Today**: a task-first page with a compact due/overdue/study-time strip, the agenda in the main column, and assignment capture, workload and shortcuts in a side column. Narrow detail areas stack these sections vertically. The sidebar uses smaller monochrome symbols and clear Plan / Study / Workspace groups. The repeated branding badge, slogans, oversized rounded headings and promotional dashboard cards have been removed.
 
 Calendar uses a tighter fixed toolbar and date sections separated by rules. Shared panels have restrained borders and smaller corners; system typography and the Mac's accent color are used throughout. Focus has a thin timer track and a linear daily-goal display. Capture, checklists, completion/Undo, study routines, search, timers and calendar scheduling keep their existing behavior. Suggested steps remain removed.
+
+### App icon (1.11.1)
+
+StudyPilot uses an original open-book mark whose right page folds into a directional pointer, with ivory paper and a sea-glass fold on an ink background. Editable AppKit artwork lives in `Scripts/render-icon.swift`; run `bash Scripts/build-icon.sh` to rebuild the ten-size ICNS and the 1024px PNG in `Resources/Brand/StudyPilot-icon.png`. The app bundle continues to use `Resources/StudyPilot.icns`.
