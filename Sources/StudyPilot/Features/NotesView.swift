@@ -27,7 +27,7 @@ struct NotesView: View {
     var body: some View {
         HSplitView {
             VStack(alignment: .leading, spacing: 14) {
-                HStack { Text("Notes").font(.system(size: 26, weight: .bold, design: .rounded)); Spacer(); Button(action: addNote) { Image(systemName: "square.and.pencil") }.help("New note (⇧⌘N)") }
+                HStack { Text("Notes").font(.system(size: 24, weight: .semibold)); Spacer(); Button(action: addNote) { Image(systemName: "square.and.pencil") }.help("New note (⇧⌘N)") }
                 TextField("Search notes & tags", text: $search).textFieldStyle(.roundedBorder)
                 HStack {
                     Picker("Notebook", selection: $notebookID) {
@@ -44,7 +44,7 @@ struct NotesView: View {
                     ForEach(filtered) { note in
                         VStack(alignment: .leading, spacing: 7) {
                             Text(note.title.isEmpty ? "Untitled note" : note.title).font(.headline).lineLimit(1)
-                            Text(note.body.isEmpty ? "A blank page, full of possibility." : note.body.replacingOccurrences(of: "\n", with: " ")).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                            Text(note.body.isEmpty ? "Empty note" : note.body.replacingOccurrences(of: "\n", with: " ")).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                             HStack {
                                 Text(note.updatedAt, format: .dateTime.month(.abbreviated).day())
                                 Spacer()
@@ -61,7 +61,7 @@ struct NotesView: View {
                     NoteEditor(note: note, notebooks: notebooks, subjects: subjects, allNotes: notes) { id in selectedID = id; notebookID = nil; subjectID = nil; search = "" }.id(note.id)
                 } else {
                     VStack(spacing: 10) {
-                        EmptyState(symbol: "note.text", title: "Think on the page", message: "Keep class notes, connect your ideas with [[note titles]], and find them again when you need them.")
+                        EmptyState(symbol: "note.text", title: "Select a note", message: "Keep class notes, connect your ideas with [[note titles]], and find them again when you need them.")
                         Button("Write a note", action: addNote).buttonStyle(.borderedProminent)
                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 }

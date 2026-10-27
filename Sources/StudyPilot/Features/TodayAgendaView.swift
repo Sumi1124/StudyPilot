@@ -23,23 +23,19 @@ struct TodayAgendaView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
-                Label("Your agenda", systemImage: "calendar.day.timeline.left").font(.title3.bold())
+                Text("Agenda").font(.system(size: 16, weight: .semibold))
                 Spacer()
-                Picker("Day", selection: $offset) { Text("Today").tag(0); Text("Tomorrow").tag(1) }.pickerStyle(.segmented).frame(width: 200)
-                Button("Open calendar") { app.openCalendar(day) }
+                Picker("Day", selection: $offset) { Text("Today").tag(0); Text("Tomorrow").tag(1) }.pickerStyle(.segmented).labelsHidden().frame(width: 160)
+                Button("Calendar") { app.openCalendar(day) }.buttonStyle(.link)
             }
-            let overdue = assignments.filter { !$0.isDone && $0.dueDate < app.now }
-            if !overdue.isEmpty {
-                HStack { Label("\(overdue.count) overdue assignment\(overdue.count == 1 ? "" : "s")", systemImage: "exclamationmark.circle").foregroundStyle(.orange); Spacer(); Button("Review overdue") { app.assignmentTimeFilter = .overdue; app.section = .assignments } }.font(.callout)
-            }
-            Text("Due \(offset == 0 ? "today" : "tomorrow") · \(tasks.count) task\(tasks.count == 1 ? "" : "s") · \(tasks.reduce(0) { $0 + $1.estimatedMinutes }) min estimated effort").font(.subheadline.bold())
+            HStack { Text("Due \(offset == 0 ? "today" : "tomorrow")").font(.system(size: 13, weight: .semibold)); Spacer(); Text("\(tasks.count) task\(tasks.count == 1 ? "" : "s") · \(tasks.reduce(0) { $0 + $1.estimatedMinutes }) min estimated").font(.caption).foregroundStyle(.secondary) }
             if tasks.isEmpty { Text("No unfinished assignments due on this day.").foregroundStyle(.secondary).font(.callout) }
             ForEach(tasks.prefix(6)) { task in
                 AssignmentRow(assignment: task, subject: subjects.first { $0.id == task.subjectID }) { editing = task }
             }
             if tasks.count > 6 { Button("View all \(tasks.count) assignments") { app.assignmentTimeFilter = offset == 0 ? .today : .tomorrow; app.section = .assignments } }
             Divider()
-            HStack { Text("Scheduled time").font(.subheadline.bold()); Spacer(); if planning.hasAccess { Button("Refresh") { refresh() }.font(.caption) } }
+            HStack { Text("Scheduled time").font(.system(size: 13, weight: .semibold)); Spacer(); if planning.hasAccess { Button("Refresh") { refresh() }.font(.caption) } }
             if localEvents.isEmpty && externalEvents.isEmpty { Text("No scheduled events. Plan some study time around your deadlines.").font(.callout).foregroundStyle(.secondary) }
             ForEach(localEvents.prefix(8)) { event in
                 HStack(spacing: 12) {
@@ -49,11 +45,13 @@ struct TodayAgendaView: View {
                             do { try planning.setCompleted(done, local: event, context: context) } catch { app.error = error.localizedDescription }
                         })).labelsHidden().toggleStyle(.checkbox)
                     } else { Image(systemName: event.kind == "Exam" ? "graduationcap" : "calendar").foregroundStyle(Color.pilot) }
-                    VStack(alignment: .leading, spacing: 3) { Text(event.title).font(.callout.bold()).strikethrough(StudyBlockTracking.read(event.details).completedAt != nil); Text("\(event.startDate.formatted(date: .omitted, time: .shortened)) · \(event.durationMinutes) min · StudyPilot").font(.caption).foregroundStyle(.secondary) }
+                    VStack(alignment: .leading, spacing: 3) { Text(event.title).font(.system(size: 13, weight: .medium)).strikethrough(StudyBlockTracking.read(event.details).completedAt != nil); Text("\(event.startDate.formatted(date: .omitted, time: .shortened)) · \(event.durationMinutes) min · StudyPilot").font(.caption).foregroundStyle(.secondary) }
                     Spacer()
-                    Button("Focus") { if focus.state == nil { focus.start(minutes: min(60, max(5, event.durationMinutes)), subjectID: event.subjectID) }; app.section = .focus }
                     if let id = PlannedStudyBlock.taskID(in: event.details) { FinishStudyTaskButton(taskID: id, title: event.title) }
-                    Button("Edit") { editingEvent = event }
+                    Menu {
+                        Button("Edit event") { editingEvent = event }
+                        Button("Focus on this event") { if focus.state == nil { focus.start(minutes: min(60, max(5, event.durationMinutes)), subjectID: event.subjectID) }; app.section = .focus }
+                    } label: { Image(systemName: "ellipsis") }.menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 22).foregroundStyle(.secondary).accessibilityLabel("Actions for \(event.title)")
                 }.padding(.vertical, 4)
             }
             ForEach(externalEvents.prefix(8)) { event in
@@ -63,17 +61,17 @@ struct TodayAgendaView: View {
                             do { try planning.setCompleted(done, external: event) } catch { app.error = error.localizedDescription }
                         })).labelsHidden().toggleStyle(.checkbox)
                     } else { Image(systemName: "calendar").foregroundStyle(Color.pilot) }
-                    VStack(alignment: .leading, spacing: 3) { Text(event.title).font(.callout.bold()); Text("\(event.allDay ? "All day" : event.start.formatted(date: .omitted, time: .shortened)) · \(planning.calendars.first { $0.id == event.calendarID }?.title ?? "Synced calendar")").font(.caption).foregroundStyle(.secondary) }
+                    VStack(alignment: .leading, spacing: 3) { Text(event.title).font(.system(size: 13, weight: .medium)); Text("\(event.allDay ? "All day" : event.start.formatted(date: .omitted, time: .shortened)) · \(planning.calendars.first { $0.id == event.calendarID }?.title ?? "Synced calendar")").font(.caption).foregroundStyle(.secondary) }
                     Spacer()
                     if let id = event.ownTaskID { FinishStudyTaskButton(taskID: id, title: event.title) }
-                    Button("Ask AI") { app.ask("Help me with the calendar event \(event.title) on \(event.start.formatted(date: .abbreviated, time: .shortened)).") }
+                    Menu { Button("Ask about this event") { app.ask("Help me with the calendar event \(event.title) on \(event.start.formatted(date: .abbreviated, time: .shortened)).") } } label: { Image(systemName: "ellipsis") }.menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 22).foregroundStyle(.secondary).accessibilityLabel("Actions for \(event.title)")
                 }.padding(.vertical, 4)
             }
             if localEvents.count > 8 || externalEvents.count > 8 { Text("Showing the first eight events from each source.").font(.caption).foregroundStyle(.secondary) }
             if !planning.hasAccess { Text("Local events only. Connect calendars in Plan my study to include Google.").font(.caption).foregroundStyle(.secondary) }
             if let refreshError { Text(refreshError).font(.caption).foregroundStyle(.red) }
-            HStack { Button("Plan my study", systemImage: "sparkles") { app.showingStudyPlanner = true }; Button("Ask about \(offset == 0 ? "today" : "tomorrow")", systemImage: "bubble.left") { app.ask("What is on my calendar \(offset == 0 ? "today" : "tomorrow")?") } }
-        }.pilotCard().sheet(item: $editing) { AssignmentEditor(assignment: $0) }.sheet(item: $editingEvent) { EventEditor(event: $0) }
+            HStack { Button("Plan study time", systemImage: "calendar.badge.clock") { app.showingStudyPlanner = true }; Button("Ask about \(offset == 0 ? "today" : "tomorrow")", systemImage: "bubble.left") { app.ask("What is on my calendar \(offset == 0 ? "today" : "tomorrow")?") } }.font(.caption).buttonStyle(.link)
+        }.font(.callout).buttonStyle(.bordered).sheet(item: $editing) { AssignmentEditor(assignment: $0) }.sheet(item: $editingEvent) { EventEditor(event: $0) }
             .task { if planning.hasAccess { refresh() } }
     }
     private func refresh() { do { try planning.refresh(); refreshError = nil } catch { refreshError = error.localizedDescription } }

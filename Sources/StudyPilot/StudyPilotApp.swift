@@ -70,32 +70,27 @@ struct RootView: View {
     @ObservedObject private var updater = AppUpdater.shared
     @State private var visibility: NavigationSplitViewVisibility = .all
     @AppStorage("appearance") private var appearance = "System"
+    private func sidebarRow(_ section: AppSection) -> some View {
+        Label { Text(section.rawValue).font(.system(size: 13)) } icon: { Image(systemName: section.symbol).font(.system(size: 14)).foregroundStyle(.secondary) }
+            .tag(section).padding(.vertical, 2)
+    }
     var body: some View {
         @Bindable var app = app
         NavigationSplitView(columnVisibility: $visibility) {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(spacing: 10) {
-                    Image(systemName: "paperplane.fill").font(.title3).foregroundStyle(.white).frame(width: 38, height: 38).background(Color.pilot.gradient, in: RoundedRectangle(cornerRadius: 12))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("StudyPilot").font(.system(size: 17, weight: .bold, design: .rounded))
-                        Text("YOUR STUDENT WORKSPACE").font(.system(size: 7, weight: .semibold)).tracking(1).foregroundStyle(.secondary)
-                    }
-                }.padding(.horizontal, 18).padding(.top, 20)
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 8) {
+                    Image(systemName: "paperplane").font(.system(size: 15, weight: .medium)).foregroundStyle(.secondary)
+                    Text("StudyPilot").font(.system(size: 14, weight: .semibold))
+                }.padding(.horizontal, 18).padding(.vertical, 18)
                 List(selection: $app.section) {
-                    Section("WORKSPACE") {
-                        ForEach(AppSection.allCases.prefix(3)) { section in Label(section.rawValue, systemImage: section.symbol).tag(section).padding(.vertical, 5) }
-                    }
-                    Section("LEARN & GROW") {
-                        ForEach(AppSection.allCases.dropFirst(3).prefix(4)) { section in Label(section.rawValue, systemImage: section.symbol).tag(section).padding(.vertical, 5) }
-                    }
-                    Section { Label(AppSection.chat.rawValue, systemImage: AppSection.chat.symbol).tag(AppSection.chat).padding(.vertical, 5) }
-                    Section { Label(AppSection.library.rawValue, systemImage: AppSection.library.symbol).tag(AppSection.library).padding(.vertical, 5) }
+                    Section("Plan") { ForEach([AppSection.dashboard, .assignments, .calendar]) { sidebarRow($0) } }
+                    Section("Study") { ForEach([AppSection.notes, .revision, .focus]) { sidebarRow($0) } }
+                    Section("Workspace") { ForEach([AppSection.progress, .library, .chat]) { sidebarRow($0) } }
                 }.listStyle(.sidebar)
-                VStack(alignment: .leading, spacing: 10) {
-                    Label("A little progress, every day.", systemImage: "sparkle").font(.caption).foregroundStyle(.secondary)
-                    Button { app.showingSettings = true } label: { Label("Settings & backups", systemImage: "gearshape") }.buttonStyle(.plain).foregroundStyle(.secondary)
-                }.padding(20)
-            }.navigationSplitViewColumnWidth(min: 210, ideal: 225, max: 270)
+                Divider().padding(.horizontal, 12)
+                Button { app.showingSettings = true } label: { Label("Settings & backups", systemImage: "gearshape").font(.system(size: 12)) }
+                    .buttonStyle(.plain).foregroundStyle(.secondary).padding(.horizontal, 18).padding(.vertical, 15)
+            }.navigationSplitViewColumnWidth(min: 185, ideal: 205, max: 250)
         } detail: {
             Group {
                 switch app.section {
@@ -111,7 +106,6 @@ struct RootView: View {
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity).background(Color(nsColor: .windowBackgroundColor))
                 .toolbar {
-                    ToolbarItem(placement: .navigation) { Text(app.section.rawValue).font(.headline).foregroundStyle(.secondary) }
                     ToolbarItemGroup(placement: .primaryAction) {
                         AppearanceControl()
                         Button { app.showingSearch = true } label: { Image(systemName: "magnifyingglass") }.help("Search workspace (⌘K)")

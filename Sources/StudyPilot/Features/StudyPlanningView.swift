@@ -88,7 +88,7 @@ struct StudyPlanningView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Label("Plan my study", systemImage: "calendar.badge.clock").font(.title2.bold())
-                    Text("Make room for your work, one step at a time.").font(.callout).foregroundStyle(.secondary)
+                    Text("Choose assignments, set your hours, and review.").font(.callout).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button("Close") { persist(); dismiss() }.keyboardShortcut(.cancelAction).disabled(busy)
@@ -98,11 +98,11 @@ struct StudyPlanningView: View {
                     Button { step = index; service.error = nil } label: {
                         HStack(spacing: 8) {
                             Image(systemName: step > index ? "checkmark.circle.fill" : "\(index + 1).circle.fill")
-                            Text(stepNames[index]).fontWeight(step == index ? .semibold : .regular)
+                            Text(stepNames[index]).font(.system(size: 12, weight: step == index ? .semibold : .regular))
                             Spacer(minLength: 0)
-                        }.padding(12).frame(maxWidth: .infinity)
+                        }.padding(8).frame(maxWidth: .infinity)
                             .foregroundStyle(step == index ? Color.pilot : Color.secondary)
-                            .background(step == index ? Color.pilot.opacity(0.12) : Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 10))
+                            .background(step == index ? Color.pilot.opacity(0.12) : Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 5))
                     }.buttonStyle(.plain).disabled(busy || savedMessage != nil)
                         .accessibilityLabel("Step \(index + 1): \(stepNames[index])")
                         .accessibilityAddTraits(step == index ? .isSelected : [])
@@ -113,7 +113,7 @@ struct StudyPlanningView: View {
     }
     private var assignmentStep: some View {
         VStack(alignment: .leading, spacing: 18) {
-            sectionTitle("What do you need to work on?", detail: "Select assignments and check how much work is left.")
+            sectionTitle("Assignments to schedule", detail: "Select assignments and check how much work is left.")
             connectionSection
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
@@ -207,7 +207,7 @@ struct StudyPlanningView: View {
     private var timeStep: some View {
         @Bindable var service = service
         return VStack(alignment: .leading, spacing: 18) {
-            sectionTitle("When do you like to study?", detail: "We'll fit sessions inside these hours and around your calendar.")
+            sectionTitle("Study hours", detail: "We'll fit sessions inside these hours and around your calendar.")
             StudyRoutinesView()
             VStack(alignment: .leading, spacing: 18) {
                 Picker("Plan ahead", selection: $service.settings.preferences.days) { Text("7 days").tag(7); Text("14 days").tag(14); Text("28 days").tag(28) }.frame(width: 240)
@@ -232,7 +232,7 @@ struct StudyPlanningView: View {
                 if let hoursIssue { Label(hoursIssue, systemImage: "exclamationmark.circle").foregroundStyle(.orange) }
             }.pilotCard()
             VStack(alignment: .leading, spacing: 18) {
-                Text("A manageable pace").font(.headline)
+                Text("Session settings").font(.headline)
                 HStack(spacing: 32) {
                     Picker("Session", selection: $service.settings.preferences.sessionMinutes) { Text("25 min").tag(25); Text("50 min").tag(50); Text("60 min").tag(60) }.frame(width: 205)
                     Stepper("Break: \(service.settings.preferences.breakMinutes) min", value: $service.settings.preferences.breakMinutes, in: 0...30, step: 5)
@@ -248,7 +248,7 @@ struct StudyPlanningView: View {
     }
     private var reviewStep: some View {
         VStack(alignment: .leading, spacing: 18) {
-            sectionTitle("Your study plan", detail: "Review the sessions, then choose where to save them.")
+            sectionTitle("Review schedule", detail: "Review the sessions, then choose where to save them.")
             if let plan {
                 preview(plan)
             } else {
@@ -352,7 +352,7 @@ struct StudyPlanningView: View {
         }.padding(20).background(.bar)
     }
     private func sectionTitle(_ title: String, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) { Text(title).font(.title2.bold()); Text(detail).font(.callout).foregroundStyle(.secondary) }.padding(.top, 8)
+        VStack(alignment: .leading, spacing: 6) { Text(title).font(.system(size: 20, weight: .semibold)); Text(detail).font(.callout).foregroundStyle(.secondary) }.padding(.top, 8)
     }
     private func metric(_ title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 3) { Text(value).font(.title2.bold()).monospacedDigit(); Text(title).font(.caption).foregroundStyle(.secondary) }

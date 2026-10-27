@@ -19,7 +19,7 @@ struct AcademicProgressView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                PageHeading(eyebrow: "Notice how far you’ve come", title: "Academic progress", subtitle: "Reflect on your learning, one criterion at a time.")
+                PageHeading(eyebrow: "Notice how far you’ve come", title: "Academic progress", subtitle: "Assessments and progress by subject.")
                 HStack {
                     Picker("Subject", selection: $selectedID) { ForEach(subjects) { Text($0.name).tag(Optional($0.id)) } }.frame(maxWidth: 350)
                     Spacer()
@@ -31,7 +31,7 @@ struct AcademicProgressView: View {
                     ForEach(Criterion.allCases) { criterion in
                         let value = StudyAnalytics.average(criterion, assessments: results.map(\.record))
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("CRITERION \(criterion.rawValue)").font(.system(size: 10, weight: .bold)).tracking(1).foregroundStyle(.secondary)
+                            Text("Criterion \(criterion.rawValue)").font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
                             HStack(alignment: .firstTextBaseline, spacing: 3) { Text(value.map { String(format: "%.1f", $0) } ?? "—").font(.system(size: 34, weight: .semibold, design: .rounded)); Text("/ 8").foregroundStyle(.secondary) }
                             Text("Target \(selected?.target ?? 6) · recorded average").font(.system(size: 10)).foregroundStyle(.secondary)
                             if let value { SwiftUI.ProgressView(value: value, total: 8).tint(value >= Double(selected?.target ?? 6) ? Color(hex: "2B998C") : .pilot) }

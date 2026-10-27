@@ -15,7 +15,7 @@ struct LibraryView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                PageHeading(eyebrow: "A place for every idea", title: "Subjects & projects", subtitle: "Shape your workspace around what you’re learning.")
+                PageHeading(eyebrow: "A place for every idea", title: "Subjects & projects", subtitle: "Organize subjects and related assignments.")
                 HStack { Text("Your subjects").font(.title3.bold()); Spacer(); Button("Add subject", systemImage: "plus") { newSubject = true } }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 220))], spacing: 16) {
                     ForEach(subjects) { subject in
@@ -29,7 +29,7 @@ struct LibraryView: View {
                     }
                 }
                 HStack { Text("Projects").font(.title3.bold()); Spacer(); Button("New project", systemImage: "plus") { newProject = true } }
-                if projects.isEmpty { EmptyState(symbol: "folder", title: "Give a bigger idea a home", message: "Group related assignments into a project, such as your personal project or an investigation.").pilotCard() }
+                if projects.isEmpty { EmptyState(symbol: "folder", title: "No projects yet", message: "Group related assignments into a project, such as your personal project or an investigation.").pilotCard() }
                 ForEach(projects) { project in
                     HStack(spacing: 18) {
                         Image(systemName: "folder.fill").font(.title2).foregroundStyle(Color.pilot)

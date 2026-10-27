@@ -79,38 +79,31 @@ struct PlannerCalendarView: View {
         } message: { Text("The event and its reminder will be removed.") }
     }
     private var navigation: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Calendar").font(.system(size: 28, weight: .bold, design: .rounded))
-                    Text("Your deadlines and time to work, together.").font(.callout).foregroundStyle(.secondary)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 16) {
+                Text("Calendar").font(.system(size: 24, weight: .semibold))
+                Picker("View", selection: $mode) { Text("Agenda").tag("Agenda"); Text("Week").tag("Week"); Text("Month").tag("Month") }.pickerStyle(.segmented).labelsHidden().frame(width: 210)
                 Spacer()
-                Button("Plan my study", systemImage: "calendar.badge.clock") { app.showingStudyPlanner = true }.buttonStyle(.borderedProminent)
-                Button("Add event", systemImage: "plus") { adding = true }
+                Button("Plan my study") { app.showingStudyPlanner = true }.buttonStyle(.bordered)
+                Button("Add event", systemImage: "plus") { adding = true }.buttonStyle(.borderedProminent)
             }
             HStack(spacing: 10) {
                 Button { move(-1) } label: { Image(systemName: "chevron.left") }.help(mode == "Month" ? "Previous month" : "Previous week")
-                DatePicker("Selected date", selection: $selected, displayedComponents: .date).labelsHidden().frame(width: 140)
+                DatePicker("Selected date", selection: $selected, displayedComponents: .date).labelsHidden().frame(width: 130)
                 Button { move(1) } label: { Image(systemName: "chevron.right") }.help(mode == "Month" ? "Next month" : "Next week")
                 Button("Today") { selected = Date() }
-                Spacer()
-                Picker("View", selection: $mode) { Text("Agenda").tag("Agenda"); Text("Week").tag("Week"); Text("Month").tag("Month") }.pickerStyle(.segmented).labelsHidden().frame(width: 245)
-            }
-            HStack(spacing: 16) {
-                TextField("Find a deadline or event", text: $search).textFieldStyle(.roundedBorder).frame(maxWidth: 300)
-                Toggle("Hide completed", isOn: $hideCompleted).toggleStyle(.checkbox)
-                Spacer()
-                Button("Refresh", systemImage: "arrow.clockwise") { refreshSynced() }.disabled(!planning.hasAccess)
+                Spacer(minLength: 8)
+                TextField("Search calendar", text: $search).textFieldStyle(.roundedBorder).frame(maxWidth: 240)
+                Toggle("Hide completed", isOn: $hideCompleted).toggleStyle(.checkbox).font(.caption)
+                Button { refreshSynced() } label: { Image(systemName: "arrow.clockwise") }.disabled(!planning.hasAccess).help("Refresh synced calendars")
             }
             HStack(spacing: 8) {
-                Image(systemName: planning.hasAccess ? "checkmark.circle" : "calendar")
-                Text(planning.hasAccess ? "Selected synced calendars + StudyPilot\(syncedAt.map { " · read at " + $0.formatted(date: .omitted, time: .shortened) } ?? "")" : "StudyPilot events only")
-                if !planning.hasAccess { Button("Connect calendars") { app.showingStudyPlanner = true }.buttonStyle(.link) }
+                Text(planning.hasAccess ? "Selected calendars + StudyPilot\(syncedAt.map { " · updated " + $0.formatted(date: .omitted, time: .shortened) } ?? "")" : "StudyPilot calendar")
+                if !planning.hasAccess { Button("Connect calendars…") { app.showingStudyPlanner = true }.buttonStyle(.link) }
             }.font(.caption).foregroundStyle(.secondary)
             if let syncError { Text(syncError).font(.caption).foregroundStyle(.red) }
             if let message = planning.completionCleanupMessage { Text(message).font(.caption).foregroundStyle(.orange) }
-        }.padding(22).background(.bar)
+        }.padding(.horizontal, 24).padding(.vertical, 16).background(.bar)
     }
     private var weekSummary: some View {
         let tasks = assignments.filter { taskVisible($0) && $0.dueDate >= readRange.start && $0.dueDate < readRange.end }
@@ -120,18 +113,18 @@ struct PlannerCalendarView: View {
         let minutes = local.reduce(0) { $0 + max(0, Int(min(readRange.end, $1.startDate.addingTimeInterval(Double($1.durationMinutes * 60))).timeIntervalSince(max(readRange.start, $1.startDate)) / 60)) }
             + external.filter { !$0.allDay }.reduce(0) { $0 + max(0, Int(min(readRange.end, $1.end).timeIntervalSince(max(readRange.start, $1.start)) / 60)) }
         return VStack(alignment: .leading, spacing: 14) {
-            HStack { Text("\(readRange.start.formatted(.dateTime.month(.abbreviated).day())) – \(agendaDays.last!.formatted(.dateTime.month(.abbreviated).day()))").font(.headline); Spacer(); Text("This view follows your search and completed filter.").font(.caption).foregroundStyle(.secondary) }
+            HStack { Text("\(readRange.start.formatted(.dateTime.month(.abbreviated).day())) – \(agendaDays.last!.formatted(.dateTime.month(.abbreviated).day()))").font(.headline); Spacer(); Text("Filtered totals").font(.caption).foregroundStyle(.secondary) }
             HStack(spacing: 30) {
                 statistic("Local deadlines", value: "\(tasks.count)", symbol: "flag")
                 statistic("Calendar events", value: "\(sessions)", symbol: "calendar")
                 statistic("Timed events", value: "\(minutes) min", symbol: "clock")
                 Spacer()
             }
-            Text("Calendar events include classes and commitments. Deadlines are not booked study time. Google updates follow macOS Calendar sync.").font(.caption).foregroundStyle(.secondary)
-        }.pilotCard()
+            Text("Timed events include classes and other commitments; deadlines are separate.").font(.caption).foregroundStyle(.secondary)
+        }.padding(.vertical, 12).overlay(alignment: .bottom) { Divider() }
     }
     private func statistic(_ title: String, value: String, symbol: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) { Label(title, systemImage: symbol).font(.caption).foregroundStyle(.secondary); Text(value).font(.title2.bold()).monospacedDigit() }
+        VStack(alignment: .leading, spacing: 5) { Label(title, systemImage: symbol).font(.caption).foregroundStyle(.secondary); Text(value).font(.system(size: 21, weight: .medium)).monospacedDigit() }
     }
     private var grid: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -143,21 +136,21 @@ struct PlannerCalendarView: View {
     }
     private func agendaDay(_ day: Date) -> some View {
         let entries = items(on: day)
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 14) {
-                VStack(spacing: 1) { Text(day, format: .dateTime.weekday(.abbreviated)).font(.caption.weight(.semibold)); Text(day, format: .dateTime.day()).font(.title2.bold()) }
-                    .foregroundStyle(calendar.isDateInToday(day) ? Color.pilot : Color.primary).frame(width: 58, height: 60).background(Color.pilot.opacity(calendar.isDateInToday(day) ? 0.13 : 0.04), in: RoundedRectangle(cornerRadius: 12))
-                VStack(alignment: .leading, spacing: 4) { Text(calendar.isDateInToday(day) ? "Today" : day.formatted(.dateTime.weekday(.wide))).font(.headline); Text(day, format: .dateTime.month(.wide).day()).font(.caption).foregroundStyle(.secondary) }
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(day, format: .dateTime.weekday(.wide)).font(.system(size: 16, weight: .semibold))
+                Text(day, format: .dateTime.month(.abbreviated).day()).font(.callout).foregroundStyle(.secondary)
+                if calendar.isDateInToday(day) { Text("Today").font(.caption.weight(.medium)).foregroundStyle(Color.pilot) }
                 Spacer()
                 Text("\(entries.count) item\(entries.count == 1 ? "" : "s")").font(.caption).foregroundStyle(.secondary)
-                Button("Add event") { selected = day; adding = true }.font(.caption)
-            }
-            if entries.isEmpty { Text(search.isEmpty ? "No matching deadlines or events. Room to plan something." : "No matches on this day.").font(.callout).foregroundStyle(.secondary).padding(.vertical, 8) }
+                Button { selected = day; adding = true } label: { Image(systemName: "plus") }.buttonStyle(.plain).foregroundStyle(.secondary).help("Add event on \(day.formatted(date: .abbreviated, time: .omitted))")
+            }.padding(.bottom, 6)
+            if entries.isEmpty { Text(search.isEmpty ? "No deadlines or events." : "No matches on this day.").font(.callout).foregroundStyle(.secondary).padding(.vertical, 8) }
             ForEach(entries) { entry in
                 switch entry {
                 case .task(let task):
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("ASSIGNMENT DEADLINE").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                        Text("Deadline").font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
                         AssignmentRow(assignment: task, subject: subject(task.subjectID)) { editingTask = task }
                     }
                 case .local(let event): localRow(event)
@@ -165,18 +158,18 @@ struct PlannerCalendarView: View {
                 }
                 if entry.id != entries.last?.id { Divider() }
             }
-        }.frame(maxWidth: .infinity, alignment: .leading).pilotCard()
+        }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12).overlay(alignment: .bottom) { Divider() }
     }
     private func localRow(_ event: PlannerEvent) -> some View {
         HStack(spacing: 14) {
             Toggle("Complete \(event.title)", isOn: Binding(get: { StudyBlockTracking.read(event.details).completedAt != nil }, set: { done in do { try planning.setCompleted(done, local: event, context: context) } catch { app.error = error.localizedDescription } })).labelsHidden().toggleStyle(.checkbox)
             VStack(alignment: .leading, spacing: 5) {
-                Text(event.title).font(.callout.weight(.semibold)).strikethrough(StudyBlockTracking.read(event.details).completedAt != nil)
+                Text(event.title).font(.system(size: 13, weight: .medium)).strikethrough(StudyBlockTracking.read(event.details).completedAt != nil)
                 Text(localTimeLabel(event)).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
             if let id = PlannedStudyBlock.taskID(in: event.details) { FinishStudyTaskButton(taskID: id, title: event.title) }
-            Button("Edit") { editingEvent = event }
+            Button("Edit") { editingEvent = event }.buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
         }.padding(.vertical, 8).contextMenu { Button("Delete event…", role: .destructive) { deleting = event } }
     }
     private func localTimeLabel(_ event: PlannerEvent) -> String {
@@ -190,7 +183,7 @@ struct PlannerCalendarView: View {
                 Toggle("Complete \(event.title)", isOn: Binding(get: { StudyBlockTracking.read(event.notes).completedAt != nil }, set: { done in do { try planning.setCompleted(done, external: event); refreshSynced() } catch { app.error = error.localizedDescription } })).labelsHidden().toggleStyle(.checkbox).disabled(!event.writable || event.recurring)
             } else { Image(systemName: "calendar").foregroundStyle(Color.pilot).frame(width: 16) }
             VStack(alignment: .leading, spacing: 5) {
-                Text(event.title).font(.callout.weight(.semibold)).strikethrough(StudyBlockTracking.read(event.notes).completedAt != nil || planning.isTaskFinished(event.id))
+                Text(event.title).font(.system(size: 13, weight: .medium)).strikethrough(StudyBlockTracking.read(event.notes).completedAt != nil || planning.isTaskFinished(event.id))
                 Text("\(event.allDay ? "All day" : event.start.formatted(date: .abbreviated, time: .shortened) + " – " + event.end.formatted(date: .omitted, time: .shortened)) · \(planning.calendars.first { $0.id == event.calendarID }?.title ?? "Synced calendar")").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()

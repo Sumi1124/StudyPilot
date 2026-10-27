@@ -17,19 +17,19 @@ struct FocusView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 26) {
-                PageHeading(eyebrow: "Be here, now", title: "Focus", subtitle: "Protect a little time for what matters.")
+                PageHeading(eyebrow: "Be here, now", title: "Focus", subtitle: "Set a timer and record your study time.")
                 HStack(alignment: .top, spacing: 24) {
                     VStack(spacing: 24) {
-                        Text(focus.state?.isBreak == true ? "A MOMENT TO RECHARGE" : "ONE THING AT A TIME").font(.system(size: 10, weight: .bold)).tracking(2).foregroundStyle(Color.pilot)
+                        Text(focus.state?.isBreak == true ? "Break" : "Focus session").font(.system(size: 13, weight: .semibold)).foregroundStyle(.secondary)
                         ZStack {
-                            Circle().stroke(Color.pilot.opacity(0.10), lineWidth: 12)
+                            Circle().stroke(Color.secondary.opacity(0.12), lineWidth: 3)
                             Circle().trim(from: 0, to: focus.state.map { min(1, max(0, focus.remaining / $0.plannedSeconds)) } ?? 1)
-                                .stroke(Color.pilot.gradient, style: StrokeStyle(lineWidth: 8, lineCap: .round)).rotationEffect(.degrees(-90))
+                                .stroke(focus.state == nil ? Color.secondary.opacity(0.22) : Color.pilot, style: StrokeStyle(lineWidth: 3, lineCap: .round)).rotationEffect(.degrees(-90))
                             VStack(spacing: 10) {
-                                Text(String(format: "%02d:%02d", shownSeconds / 60, shownSeconds % 60)).font(.system(size: 60, weight: .light, design: .rounded)).monospacedDigit().contentTransition(.numericText())
-                                Text(focus.state == nil ? "Ready when you are" : focus.isRunning ? "You’re making progress" : "Paused. Take your time.").font(.caption).foregroundStyle(.secondary)
+                                Text(String(format: "%02d:%02d", shownSeconds / 60, shownSeconds % 60)).font(.system(size: 60, weight: .light)).monospacedDigit().contentTransition(.numericText())
+                                Text(focus.state == nil ? "Ready" : focus.isRunning ? "Running" : "Paused").font(.caption).foregroundStyle(.secondary)
                             }
-                        }.frame(width: 280, height: 280).accessibilityElement(children: .combine)
+                        }.frame(width: 240, height: 240).accessibilityElement(children: .combine)
                         if let state = focus.state {
                             Text(state.isBreak ? "Break" : subjects.first { $0.id == state.subjectID }?.name ?? "Independent study").font(.headline)
                             HStack {
@@ -51,7 +51,7 @@ struct FocusView: View {
                         Text("Your timer keeps time in the background and recovers after relaunch. Breaks are not counted as study time.").font(.caption).foregroundStyle(.tertiary).multilineTextAlignment(.center).frame(maxWidth: 330)
                     }.padding(18).frame(maxWidth: .infinity).pilotCard()
                     VStack(alignment: .leading, spacing: 24) {
-                        Text("Your rhythm").font(.title3.bold())
+                        Text("Study time").font(.title3.bold())
                         DailyStudyGoalView(sessions: sessions.map(\.record), now: app.now, editable: true)
                         Divider()
                         Text("Past 7 days").font(.headline)
@@ -71,7 +71,7 @@ struct FocusView: View {
                 }
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Session history").font(.title3.bold())
-                    if sessions.isEmpty { Text("A clear space for your future progress.").foregroundStyle(.secondary).padding(.vertical, 20) }
+                    if sessions.isEmpty { Text("No sessions recorded yet.").foregroundStyle(.secondary).padding(.vertical, 20) }
                     ForEach(sessions.prefix(100)) { session in
                         HStack {
                             Image(systemName: session.completed ? "checkmark.circle.fill" : "clock").foregroundStyle(session.completed ? Color.pilot : .secondary)
@@ -95,7 +95,7 @@ struct StudyTimeChart: View {
     var body: some View {
         Chart(days, id: \.self) { day in
             let minutes = sessions.filter { Calendar.current.isDate($0.endedAt, inSameDayAs: day) }.reduce(0) { $0 + $1.durationSeconds } / 60
-            BarMark(x: .value("Day", day, unit: .day), y: .value("Minutes", minutes)).foregroundStyle(Color.pilot.gradient).cornerRadius(4)
+            BarMark(x: .value("Day", day, unit: .day), y: .value("Minutes", minutes)).foregroundStyle(Color.pilot).cornerRadius(1)
                 .accessibilityLabel(day.formatted(.dateTime.weekday(.wide))).accessibilityValue("\(Int(minutes)) minutes")
         }.chartXAxis { AxisMarks(values: .stride(by: .day)) { AxisValueLabel(format: .dateTime.weekday(.narrow)) } }
             .chartYAxisLabel("minutes").chartYScale(domain: 0...max(30, days.map { day in sessions.filter { Calendar.current.isDate($0.endedAt, inSameDayAs: day) }.reduce(0) { $0 + $1.durationSeconds } / 60 }.max() ?? 30))

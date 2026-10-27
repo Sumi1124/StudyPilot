@@ -4,7 +4,7 @@ import StudyPilotCore
 import StudyPilotData
 
 public enum AppSection: String, CaseIterable, Identifiable {
-    case dashboard = "Overview", assignments = "Assignments", calendar = "Calendar", notes = "Notes", revision = "Revision", focus = "Focus", progress = "Progress", library = "Subjects & projects", chat = "AI Chat"
+    case dashboard = "Today", assignments = "Assignments", calendar = "Calendar", notes = "Notes", revision = "Revision", focus = "Focus", progress = "Progress", library = "Subjects & projects", chat = "AI Chat"
     public var id: String { rawValue }
     var symbol: String {
         switch self {
@@ -116,7 +116,7 @@ extension Color {
         let value = UInt64(hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted), radix: 16) ?? 0x6877E8
         self.init(red: Double((value >> 16) & 255) / 255, green: Double((value >> 8) & 255) / 255, blue: Double(value & 255) / 255)
     }
-    static let pilot = Color(hex: "6877E8")
+    static var pilot: Color { Color(nsColor: .controlAccentColor) }
 }
 extension Subject { var color: Color { Color(hex: colorHex) } }
 extension Assignment {
@@ -125,8 +125,8 @@ extension Assignment {
 }
 extension View {
     func pilotCard() -> some View {
-        self.padding(20).background(.background, in: RoundedRectangle(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).stroke(.primary.opacity(0.055), lineWidth: 1))
+        self.padding(18).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(nsColor: .separatorColor).opacity(0.35), lineWidth: 0.5))
     }
 }
 struct PageHeading: View {
@@ -134,9 +134,8 @@ struct PageHeading: View {
     let title: String
     let subtitle: String
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(eyebrow.uppercased()).font(.system(size: 10, weight: .bold, design: .rounded)).tracking(2).foregroundStyle(Color.pilot)
-            Text(title).font(.system(size: 32, weight: .bold, design: .rounded))
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title).font(.system(size: 24, weight: .semibold))
             if !subtitle.isEmpty { Text(subtitle).font(.callout).foregroundStyle(.secondary) }
         }.frame(maxWidth: .infinity, alignment: .leading)
     }

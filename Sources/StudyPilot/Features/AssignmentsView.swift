@@ -37,7 +37,7 @@ struct AssignmentsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                PageHeading(eyebrow: "Make room for your best work", title: "Assignments", subtitle: "A clear next step for everything on your plate.")
+                PageHeading(eyebrow: "Make room for your best work", title: "Assignments", subtitle: "Deadlines, priorities, and your own checklists.")
                 QuickTaskEntry().pilotCard()
                 Picker("Deadline filter", selection: Binding(get: { app.assignmentTimeFilter }, set: { app.assignmentTimeFilter = $0 })) {
                     ForEach(AssignmentTimeFilter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -69,7 +69,7 @@ struct AssignmentsView: View {
                 if let bulkMessage { Text(bulkMessage).font(.caption).foregroundStyle(.secondary) }
                 VStack(spacing: 0) {
                     if filtered.isEmpty {
-                        EmptyState(symbol: "checklist", title: assignments.isEmpty ? "Your next chapter starts here" : "No matching assignments", message: assignments.isEmpty ? "Add an assignment, break it into small steps, and make a little progress every day." : "Try another subject, status, or search.")
+                        EmptyState(symbol: "checklist", title: assignments.isEmpty ? "No assignments yet" : "No matching assignments", message: assignments.isEmpty ? "Add an assignment to start tracking your work." : "Try another subject, status, or search.")
                         if assignments.isEmpty { Button("Add an assignment") { app.showingAssignment = true }.buttonStyle(.borderedProminent).padding(.bottom, 24) }
                     }
                     ForEach(filtered) { assignment in

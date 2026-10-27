@@ -176,3 +176,9 @@ Calendar opens with a seven-day **Agenda** starting on the selected date. A fixe
 Assignment rows now have expandable **manual checklists**. Tick individual items without opening the editor; completing a checklist does not automatically finish the assignment or clear its sessions.
 
 In Plan my study → Study time, expand **My study routines** to save up to five named sets of study days, hours, session/break lengths, planning horizon and daily limit. Use applies a routine and requires a fresh preview. Saving the same name updates that routine. Removing a saved routine keeps your current hours. Routines do not change automatic-rescheduling preferences or calendar selections. No suggested steps are generated.
+
+### Native visual redesign (1.11)
+
+Overview is now **Today**: a task-first page with a compact due/overdue/study-time strip, the agenda in the main column, and assignment capture, workload and shortcuts in a side column. Narrow detail areas stack these sections vertically. The sidebar uses smaller monochrome symbols and clear Plan / Study / Workspace groups. The repeated branding badge, slogans, oversized rounded headings and promotional dashboard cards have been removed.
+
+Calendar uses a tighter fixed toolbar and date sections separated by rules. Shared panels have restrained borders and smaller corners; system typography and the Mac's accent color are used throughout. Focus has a thin timer track and a linear daily-goal display. Capture, checklists, completion/Undo, study routines, search, timers and calendar scheduling keep their existing behavior. Suggested steps remain removed.

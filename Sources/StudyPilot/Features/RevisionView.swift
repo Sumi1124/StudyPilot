@@ -24,12 +24,12 @@ struct RevisionView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                PageHeading(eyebrow: "Make it stick", title: "Revision", subtitle: "Small reviews today. Stronger recall tomorrow.")
+                PageHeading(eyebrow: "Make it stick", title: "Revision", subtitle: "Review your flashcards and manage decks.")
                 HStack {
                     Text("Your decks").font(.headline); Spacer()
                     Button("New deck", systemImage: "plus") { addDeck = true }.buttonStyle(.borderedProminent)
                 }
-                if decks.isEmpty { EmptyState(symbol: "rectangle.on.rectangle", title: "Build a little knowledge", message: "Create a deck and add your own questions. StudyPilot will schedule each card based on how well you remember it.").pilotCard() }
+                if decks.isEmpty { EmptyState(symbol: "rectangle.on.rectangle", title: "No decks yet", message: "Create a deck and add your own questions. StudyPilot will schedule each card based on how well you remember it.").pilotCard() }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 210))], spacing: 14) {
                     ForEach(decks) { deck in
                         let count = cards.filter { $0.deckID == deck.id }.count
@@ -174,7 +174,7 @@ struct ReviewSessionView: View {
             ProgressView(value: Double(index), total: Double(max(1, cards.count))).tint(.pilot)
             if index < cards.count {
                 let card = cards[index]
-                Text("CARD \(index + 1) OF \(cards.count)").font(.caption.bold()).tracking(2).foregroundStyle(.secondary)
+                Text("Card \(index + 1) of \(cards.count)").font(.caption.weight(.medium)).foregroundStyle(.secondary)
                 ScrollView {
                     VStack(spacing: 24) {
                         Text(card.question).font(.system(size: 26, weight: .medium, design: .rounded)).multilineTextAlignment(.center).textSelection(.enabled)
