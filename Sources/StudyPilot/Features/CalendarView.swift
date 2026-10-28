@@ -9,6 +9,51 @@ private enum SchoolAgendaItem: Identifiable {
     var start: Date { switch self { case .task(let a): a.dueDate; case .local(let e): e.startDate; case .synced(let e): e.start } }
     var isAllDay: Bool { if case .synced(let e) = self { return e.allDay }; return false }
 }
+private struct StudyDayGroup: Identifiable {
+    let title: String
+    var local: [PlannerEvent] = []
+    var synced: [CalendarPlanningEvent] = []
+    var id: String { title.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current) }
+    var count: Int { local.count + synced.count }
+    var minutes: Int {
+        local.reduce(0) { $0 + $1.durationMinutes }
+        + synced.reduce(0) { $0 + max(0, Int($1.end.timeIntervalSince($1.start) / 60)) }
+    }
+}
+private func studyTitle(_ title: String) -> String {
+    title.replacingOccurrences(of: "Study: ", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+}
+private func studyGroups(local: [PlannerEvent], synced: [CalendarPlanningEvent]) -> [StudyDayGroup] {
+    var groups: [StudyDayGroup] = []
+    for event in local {
+        let title = studyTitle(event.title)
+        let key = title.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        if let index = groups.firstIndex(where: { $0.id == key }) { groups[index].local.append(event) }
+        else { groups.append(StudyDayGroup(title: title, local: [event])) }
+    }
+    for event in synced {
+        let title = studyTitle(event.title)
+        let key = title.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        if let index = groups.firstIndex(where: { $0.id == key }) { groups[index].synced.append(event) }
+        else { groups.append(StudyDayGroup(title: title, synced: [event])) }
+    }
+    return groups
+}
+private struct CalendarEventGroup: Identifiable {
+    let title: String
+    var events: [CalendarPlanningEvent]
+    var id: String { title.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current) }
+}
+private func calendarEventGroups(_ events: [CalendarPlanningEvent]) -> [CalendarEventGroup] {
+    var groups: [CalendarEventGroup] = []
+    for event in events {
+        let title = event.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = title.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        if let index = groups.firstIndex(where: { $0.id == key }) { groups[index].events.append(event) }
+        else { groups.append(CalendarEventGroup(title: title, events: [event])) }
+    }
+    return groups
+}
 struct PlannerCalendarView: View {
     @Environment(\.modelContext) private var context
     @Environment(AppState.self) private var app
@@ -181,7 +226,9 @@ struct PlannerCalendarView: View {
         let external = synced.filter { externalVisible($0) && SchoolAgenda.occurs(start: $0.start, end: $0.end, on: day) }
         let study = external.filter { $0.ownTaskID != nil }
         let other = external.filter { $0.ownTaskID == nil }
-        let count = tasks.count + local.count + external.count
+        let groups = studyGroups(local: local, synced: study)
+        let otherGroups = calendarEventGroups(other)
+        let count = tasks.count + groups.count + otherGroups.count
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(day, format: .dateTime.weekday(.wide)).font(.system(size: 16, weight: .semibold))
@@ -196,13 +243,49 @@ struct PlannerCalendarView: View {
                     .padding(.vertical, 12)
             }
             if !tasks.isEmpty { agendaSection("Deadlines", count: tasks.count, symbol: "flag.fill", color: .pilotBlue) { ForEach(tasks) { deadlineRow($0) } } }
-            if !local.isEmpty || !study.isEmpty {
-                agendaSection("Study blocks", count: local.count + study.count, symbol: "timer", color: .pilot) {
-                    ForEach(local) { localRow($0) }
-                    ForEach(study) { externalRow($0) }
+            if !groups.isEmpty {
+                agendaSection("Study blocks", count: groups.count, symbol: "timer", color: .pilot) {
+                    ForEach(groups) { group in
+                        if group.count == 1 {
+                            if let event = group.local.first { localRow(event) }
+                            else if let event = group.synced.first { externalRow(event) }
+                        } else {
+                            DisclosureGroup {
+                                VStack(spacing: 8) {
+                                    ForEach(group.local) { localRow($0, showTitle: false) }
+                                    ForEach(group.synced) { externalRow($0, showTitle: false) }
+                                }.padding(.top, 8)
+                            } label: {
+                                HStack {
+                                    Text(group.title).font(.system(size: 13, weight: .semibold))
+                                    Spacer()
+                                    Text("\(group.count) sessions · \(group.minutes) min")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }.padding(12).background(Color.pilot.opacity(0.06), in: RoundedRectangle(cornerRadius: 11))
+                        }
+                    }
                 }
             }
-            if !other.isEmpty { agendaSection("Other calendar events", count: other.count, symbol: "calendar", color: Color(nsColor: .secondaryLabelColor)) { ForEach(other) { externalRow($0) } } }
+            if !otherGroups.isEmpty {
+                agendaSection("Other calendar events", count: otherGroups.count, symbol: "calendar", color: Color(nsColor: .secondaryLabelColor)) {
+                    ForEach(otherGroups) { group in
+                        if group.events.count == 1 {
+                            if let event = group.events.first { externalRow(event) }
+                        } else {
+                            DisclosureGroup {
+                                VStack(spacing: 8) { ForEach(group.events) { externalRow($0, showTitle: false) } }.padding(.top, 8)
+                            } label: {
+                                HStack {
+                                    Text(group.title).font(.system(size: 13, weight: .semibold))
+                                    Spacer()
+                                    Text("\(group.events.count) events").font(.caption).foregroundStyle(.secondary)
+                                }
+                            }.padding(12).background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 11))
+                        }
+                    }
+                }
+            }
         }.frame(maxWidth: .infinity, alignment: .leading).pilotCard()
     }
     private func agendaSection<Content: View>(_ title: String, count: Int, symbol: String, color: Color, @ViewBuilder content: () -> Content) -> some View {
@@ -226,12 +309,12 @@ struct PlannerCalendarView: View {
             Button("Edit") { editingTask = task }.buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
         }.padding(12).background(Color.pilotBlue.opacity(0.045), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
-    private func localRow(_ event: PlannerEvent) -> some View {
+    private func localRow(_ event: PlannerEvent, showTitle: Bool = true) -> some View {
         HStack(spacing: 14) {
             Toggle("Complete \(event.title)", isOn: Binding(get: { StudyBlockTracking.read(event.details).completedAt != nil }, set: { done in do { try planning.setCompleted(done, local: event, context: context) } catch { app.error = error.localizedDescription } })).labelsHidden().toggleStyle(.checkbox)
             timeBadge(event.startDate, allDay: false)
             VStack(alignment: .leading, spacing: 5) {
-                Text(event.title.replacingOccurrences(of: "Study: ", with: "")).font(.system(size: 13, weight: .semibold)).strikethrough(StudyBlockTracking.read(event.details).completedAt != nil)
+                if showTitle { Text(studyTitle(event.title)).font(.system(size: 13, weight: .semibold)).strikethrough(StudyBlockTracking.read(event.details).completedAt != nil) }
                 Text("\(event.durationMinutes) min · StudyPilot").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
@@ -245,14 +328,14 @@ struct PlannerCalendarView: View {
         let endLabel = end.formatted(date: calendar.isDate(event.startDate, inSameDayAs: end) ? .omitted : .abbreviated, time: .shortened)
         return "\(event.startDate.formatted(date: .abbreviated, time: .shortened)) – \(endLabel) · \(event.durationMinutes) min · StudyPilot"
     }
-    private func externalRow(_ event: CalendarPlanningEvent) -> some View {
+    private func externalRow(_ event: CalendarPlanningEvent, showTitle: Bool = true) -> some View {
         HStack(spacing: 14) {
             if event.ownTaskID != nil {
                 Toggle("Complete \(event.title)", isOn: Binding(get: { StudyBlockTracking.read(event.notes).completedAt != nil }, set: { done in do { try planning.setCompleted(done, external: event); refreshSynced() } catch { app.error = error.localizedDescription } })).labelsHidden().toggleStyle(.checkbox).disabled(!event.writable || event.recurring)
             } else { Image(systemName: "calendar").foregroundStyle(Color.pilot).frame(width: 16) }
             timeBadge(event.start, allDay: event.allDay)
             VStack(alignment: .leading, spacing: 5) {
-                Text(event.title.replacingOccurrences(of: "Study: ", with: "")).font(.system(size: 13, weight: .semibold)).strikethrough(StudyBlockTracking.read(event.notes).completedAt != nil || planning.isTaskFinished(event.id))
+                if showTitle { Text(studyTitle(event.title)).font(.system(size: 13, weight: .semibold)).strikethrough(StudyBlockTracking.read(event.notes).completedAt != nil || planning.isTaskFinished(event.id)) }
                 Text("\(event.allDay ? "All day" : event.end.formatted(date: .omitted, time: .shortened) + " end") · \(planning.calendars.first { $0.id == event.calendarID }?.title ?? "Synced calendar")").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
@@ -314,7 +397,9 @@ struct CalendarDayCell: View {
     let isWeek: Bool
     let isCurrentMonth: Bool
     private var visibleLimit: Int { isWeek ? 4 : 3 }
-    private var total: Int { tasks.count + events.count + synced.count }
+    private var study: [StudyDayGroup] { studyGroups(local: events, synced: synced.filter { $0.ownTaskID != nil }) }
+    private var other: [CalendarEventGroup] { calendarEventGroups(synced.filter { $0.ownTaskID == nil }) }
+    private var total: Int { tasks.count + study.count + other.count }
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
@@ -323,17 +408,23 @@ struct CalendarDayCell: View {
                 if Calendar.current.isDateInToday(day) { Circle().fill(Color.pilot).frame(width: 5, height: 5) }
             }.padding(.bottom, 4)
             ForEach(tasks.prefix(visibleLimit)) { task in taskLabel(task) }
-            ForEach(events.prefix(max(0, visibleLimit - min(tasks.count, visibleLimit)))) { event in
-                Label(event.title.replacingOccurrences(of: "Study: ", with: ""), systemImage: event.kind == "Exam" ? "graduationcap" : "clock")
+            ForEach(study.prefix(max(0, visibleLimit - min(tasks.count, visibleLimit)))) { group in
+                HStack(spacing: 2) {
+                    Label(group.title, systemImage: "timer").lineLimit(1)
+                    if group.count > 1 { Text("×\(group.count)").fontWeight(.semibold).fixedSize() }
+                }
                     .font(.system(size: 10)).lineLimit(1).padding(3)
-                    .foregroundStyle(subjects.first { $0.id == event.subjectID }?.color ?? Color.pilot)
-                    .draggable("event:\(event.id.uuidString)")
+                    .foregroundStyle(Color.pilot)
+                    .modifier(SingleEventDrag(event: group.count == 1 ? group.local.first : nil))
             }
-            let used = min(tasks.count, visibleLimit) + min(events.count, max(0, visibleLimit - min(tasks.count, visibleLimit)))
-            ForEach(synced.prefix(max(0, visibleLimit - used))) { event in
-                Label(event.title.replacingOccurrences(of: "Study: ", with: ""), systemImage: event.ownTaskID == nil ? "calendar" : "timer")
+            let used = min(tasks.count, visibleLimit) + min(study.count, max(0, visibleLimit - min(tasks.count, visibleLimit)))
+            ForEach(other.prefix(max(0, visibleLimit - used))) { group in
+                HStack(spacing: 2) {
+                    Label(group.title, systemImage: "calendar").lineLimit(1)
+                    if group.events.count > 1 { Text("×\(group.events.count)").fontWeight(.semibold).fixedSize() }
+                }
                     .font(.system(size: 10)).lineLimit(1).padding(3)
-                    .foregroundStyle(event.ownTaskID == nil ? Color(nsColor: .secondaryLabelColor) : Color.pilot)
+                    .foregroundStyle(Color(nsColor: .secondaryLabelColor))
             }
             if total > visibleLimit { Text("+\(total - visibleLimit) more").font(.system(size: 9, weight: .medium)).foregroundStyle(Color.pilot) }
             Spacer(minLength: 0)
@@ -351,6 +442,13 @@ struct CalendarDayCell: View {
             .frame(maxWidth: .infinity, alignment: .leading).padding(4)
             .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 4))
             .draggable("assignment:\(task.id.uuidString)").help("\(task.title) — drag to reschedule")
+    }
+}
+private struct SingleEventDrag: ViewModifier {
+    let event: PlannerEvent?
+    @ViewBuilder func body(content: Content) -> some View {
+        if let event { content.draggable("event:\(event.id.uuidString)") }
+        else { content }
     }
 }
 struct EventEditor: View {

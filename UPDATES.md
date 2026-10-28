@@ -33,3 +33,7 @@ Version 1.17.0 introduces one adaptive StudyPilot visual language across light a
 ## Clearer school calendar (1.18.0)
 
 Version 1.18.0 reorganizes Calendar around the questions students need answered: what is due, when to study, what else is happening, and what to check off next. The header now has direct planning and event actions, simpler List/Week/Month switching, search and active-item filtering, a clear legend, and more understandable connection status. Week and Month cells show compact previews with overflow counts instead of trying to display every item. Selecting a day opens grouped sections for deadlines, study blocks, and other calendar events, with completion controls and readable time badges. Month synchronization now covers every visible day rather than only the selected date.
+
+## Repeated calendar items (1.18.1)
+
+Version 1.18.1 groups same titled study sessions and other calendar events within each day. A topic such as Math sheet appears once with its session count and combined study time. Expand it to see each time slot and check off individual sessions. Week and Month cells also show the title once with a compact count badge.
