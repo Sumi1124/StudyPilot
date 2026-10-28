@@ -1,0 +1,44 @@
+name: Build StudyPilot for Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "Windows/**"
+      - ".github/workflows/windows-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore Windows/StudyPilot.Windows/StudyPilot.Windows.csproj
+
+      - name: Build
+        run: dotnet build Windows/StudyPilot.Windows/StudyPilot.Windows.csproj -c Release --no-restore
+
+      - name: Publish self-contained app
+        run: dotnet publish Windows/StudyPilot.Windows/StudyPilot.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o artifacts/StudyPilot-Windows
+
+      - name: Create ZIP
+        shell: pwsh
+        run: Compress-Archive -Path artifacts/StudyPilot-Windows/* -DestinationPath artifacts/StudyPilot-Windows-x64.zip
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: StudyPilot-Windows-x64
+          path: artifacts/StudyPilot-Windows-x64.zip
+          if-no-files-found: error
