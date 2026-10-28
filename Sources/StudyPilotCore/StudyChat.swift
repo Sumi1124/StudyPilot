@@ -8,8 +8,9 @@ public struct StudyChatMessage: Codable, Equatable, Identifiable, Sendable {
     public var sources: [StudyChatSource]?
     public var answerKind: String?
     public var factScope: String?
+    public var model: String?
     public var date: Date = Date()
-    public init(role: String, text: String, context: String = "", sources: [StudyChatSource]? = nil, answerKind: String? = nil, factScope: String? = nil) { self.role = role; self.text = text; self.context = context; self.sources = sources; self.answerKind = answerKind; self.factScope = factScope }
+    public init(role: String, text: String, context: String = "", sources: [StudyChatSource]? = nil, answerKind: String? = nil, factScope: String? = nil, model: String? = nil) { self.role = role; self.text = text; self.context = context; self.sources = sources; self.answerKind = answerKind; self.factScope = factScope; self.model = model }
 }
 public struct StudyChatThread: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID = UUID()
@@ -49,7 +50,7 @@ public enum StudyChat {
         guard data.count <= 10_000_000 else { throw PlanningError.invalid("Chat history is too large to open.") }
         let threads = try JSONDecoder().decode([StudyChatThread].self, from: data)
         guard threads.count <= 50, Set(threads.map(\.id)).count == threads.count,
-              threads.allSatisfy({ thread in thread.title.count <= 100 && thread.messages.count <= 200 && Set(thread.messages.map(\.id)).count == thread.messages.count && thread.messages.allSatisfy { ["user", "assistant"].contains($0.role) && $0.text.count <= 12_000 && $0.context.count <= 1800 && ($0.sources?.count ?? 0) <= 30 && ($0.sources?.allSatisfy { $0.title.count <= 500 && $0.detail.count <= 2000 } ?? true) } }) else { throw PlanningError.invalid("Chat history contains invalid records. The saved file has been preserved.") }
+              threads.allSatisfy({ thread in thread.title.count <= 100 && thread.messages.count <= 200 && Set(thread.messages.map(\.id)).count == thread.messages.count && thread.messages.allSatisfy { ["user", "assistant"].contains($0.role) && $0.text.count <= 12_000 && $0.context.count <= 1800 && ($0.model?.count ?? 0) <= 100 && ($0.sources?.count ?? 0) <= 30 && ($0.sources?.allSatisfy { $0.title.count <= 500 && $0.detail.count <= 2000 } ?? true) } }) else { throw PlanningError.invalid("Chat history contains invalid records. The saved file has been preserved.") }
         return threads
     }
 }

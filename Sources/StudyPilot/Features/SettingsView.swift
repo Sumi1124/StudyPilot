@@ -33,6 +33,7 @@ struct SettingsView: View {
                     Text("Download and install signed StudyPilot updates here. The app relaunches when installation is complete.").font(.caption).foregroundStyle(.secondary)
                     if focus.state != nil { Text("Finish the active focus session before updating.").font(.caption).foregroundStyle(.secondary) }
                 }
+                Section("AI model") { AIModelSettings() }
                 Section("Reminders") {
                     Toggle("Enable local reminders", isOn: Binding(get: { remindersEnabled }, set: { enabled in
                         if enabled { Task { await ReminderService.shared.requestPermission(context: context) } }

@@ -7,6 +7,11 @@ import FoundationModels
 
 @MainActor @Observable final class StudyChatService {
     let calendar = CalendarChatService()
+    let models = AIModelService()
+    func selectModel(_ value: ChatModelChoice) {
+        guard !generating else { return }
+        calendar.pending = nil; error = nil; models.select(value)
+    }
     var useStudyContext = UserDefaults.standard.object(forKey: "chatUseStudyContext") as? Bool ?? true {
         didSet { UserDefaults.standard.set(useStudyContext, forKey: "chatUseStudyContext") }
     }
@@ -21,6 +26,7 @@ import FoundationModels
     private var requestID: UUID?
     var selected: StudyChatThread? { threads.first { $0.id == selectedID } }
     var unavailableReason: String? {
+        if models.choice == .qwen08 { return models.unavailableReason }
         #if canImport(FoundationModels)
         if #available(macOS 26, *) {
             switch SystemLanguageModel.default.availability {
@@ -148,24 +154,24 @@ import FoundationModels
         request = Task {
             defer { if requestID == id { generating = false; requestID = nil; request = nil } }
             do {
-                #if canImport(FoundationModels)
-                if #available(macOS 26, *) {
-                    let messages = threads.first { $0.id == threadID }?.messages ?? []
-                    let wantsMove = StudyUnderstanding.requestsMove(messages: messages)
-                    let result = try await StudyChatGeneration.reply(to: prompt, eventIDs: snapshot.map { wantsMove ? Array($0.aliases.keys) : [] })
-                    try Task.checkCancellation()
-                    guard requestID == id, let index = threads.firstIndex(where: { $0.id == threadID }) else { return }
-                    var reply = result.reply
-                    if let snapshot, let move = result.move {
-                        do { try calendar.propose(move, snapshot: snapshot, threadID: threadID) }
-                        catch { reply += "\n\nNo changes made: " + error.localizedDescription }
-                    }
-                    threads[index].messages.append(StudyChatMessage(role: "assistant", text: reply, sources: sources, answerKind: "ai")); threads[index].updatedAt = Date()
-                    do { try save() } catch { self.error = "The reply is visible but could not be saved: \(error.localizedDescription)" }
-                } else { throw PlanningError.invalid(unavailableReason ?? "AI chat is unavailable.") }
-                #else
-                throw PlanningError.invalid("AI chat is unavailable on this system.")
-                #endif
+                let messages = threads.first { $0.id == threadID }?.messages ?? []
+                let wantsMove = StudyUnderstanding.requestsMove(messages: messages)
+                let eventIDs = snapshot.map { wantsMove ? Array($0.aliases.keys) : [] }
+                let result: CalendarChatResponse
+                if models.choice == .qwen08 {
+                    result = try await models.client.reply(prompt: prompt, eventIDs: eventIDs)
+                } else {
+                    result = try await StudyChatGeneration.reply(to: prompt, eventIDs: eventIDs)
+                }
+                try Task.checkCancellation()
+                guard requestID == id, let index = threads.firstIndex(where: { $0.id == threadID }) else { return }
+                var reply = result.reply
+                if let snapshot, let move = result.move {
+                    do { try calendar.propose(move, snapshot: snapshot, threadID: threadID) }
+                    catch { reply += "\n\nNo changes made: " + error.localizedDescription }
+                }
+                threads[index].messages.append(StudyChatMessage(role: "assistant", text: reply, sources: sources, answerKind: "ai", model: models.choice.title)); threads[index].updatedAt = Date()
+                do { try save() } catch { self.error = "The reply is visible but could not be saved: \(error.localizedDescription)" }
             } catch { if !Task.isCancelled && requestID == id { self.error = "Couldn’t generate a reply: \(error.localizedDescription). Your message is saved; retry or start a new chat." } }
         }
     }

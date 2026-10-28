@@ -14,6 +14,7 @@ struct StudyChatView: View {
     @State private var attachment = ""
     @State private var deleting = false
     @State private var showContext = false
+    @State private var showModels = false
     @State private var showHistory = true
     @State private var copiedID: UUID?
     @State private var savedIDs: Set<UUID> = []
@@ -37,6 +38,7 @@ struct StudyChatView: View {
             Button("Delete", role: .destructive) { chat.deleteSelected() }
         } message: { Text("This removes the saved messages from this Mac. It cannot be undone.") }
         .onAppear { consumeDraft() }
+        .task { await chat.models.refresh() }
         .onChange(of: app.chatDraft) { consumeDraft() }
         .onChange(of: app.showingStudyPlanner) { if app.showingStudyPlanner { showContext = false } }
     }
@@ -62,6 +64,17 @@ struct StudyChatView: View {
                 Button("Context & sources", systemImage: "slider.horizontal.3") { showContext.toggle() }.popover(isPresented: $showContext) { contextSettings }
                 if !showHistory { Button("New chat", systemImage: "plus") { chat.newChat() }.disabled(chat.generating) }
             }
+            HStack {
+                Picker("Model", selection: Binding(get: { chat.models.choice }, set: { chat.selectModel($0) })) {
+                    ForEach(ChatModelChoice.allCases) { Text($0.title).tag($0) }
+                }.frame(maxWidth: 300).disabled(chat.generating)
+                    .onChange(of: chat.models.choice) { Task { await chat.models.refresh() } }
+                Button("Model setup") { showModels.toggle() }.popover(isPresented: $showModels) {
+                    VStack(alignment: .leading, spacing: 16) { Text("AI model").font(.title3.bold()); AIModelSettings() }.padding(20).frame(width: 430)
+                }
+                Spacer()
+            }
+            if let reason = chat.unavailableReason { Text(reason + " Saved workspace answers are still available.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             Text("Workspace facts come directly from saved records. AI explanations may need checking.").font(.caption).foregroundStyle(.secondary)
             HStack(spacing: 8) {
                 Button("Due today") { draft = "What tasks are due today?" }
@@ -79,7 +92,7 @@ struct StudyChatView: View {
                 if let status = chat.contextStatus { Text(status).font(.caption).foregroundStyle(.secondary) }
                 CalendarChatPanel()
                 Divider()
-                Text("Task lists, deadlines, and today's or tomorrow's calendar are answered from saved data. General explanations use Apple's on-device model. Context cards show which saved items were provided, not independent proof of an AI explanation.").font(.caption).foregroundStyle(.secondary)
+                Text("Task lists, deadlines, and today's or tomorrow's calendar are answered from saved data. General explanations use your selected local model. Context cards show which saved items were provided, not independent proof of an AI explanation.").font(.caption).foregroundStyle(.secondary)
                 if let reason = chat.unavailableReason { Text(reason + " Saved-data answers still work.").font(.caption).foregroundStyle(.orange) }
                 Text("Conversations stay on this Mac and are separate from workspace JSON backups.").font(.caption).foregroundStyle(.secondary)
             }.padding(20)
@@ -98,7 +111,7 @@ struct StudyChatView: View {
                     }
                     ForEach(chat.selected?.messages ?? []) { message in messageView(message) }
                     if let proposal = chat.calendar.pending, proposal.threadID == chat.selectedID { CalendarMovePreview(proposal: proposal) }
-                    if chat.generating { HStack { ProgressView().controlSize(.small); Text("Thinking on your Mac…").foregroundStyle(.secondary) } }
+                    if chat.generating { HStack { ProgressView().controlSize(.small); Text("Replying with \(chat.models.choice.title)…").foregroundStyle(.secondary) } }
                     if let error = chat.error { Text(error).foregroundStyle(.red).textSelection(.enabled) }
                     if !chat.generating && chat.selected?.messages.last?.role == "user" { Button("Retry reply", systemImage: "arrow.clockwise") { chat.retry() } }
                     Color.clear.frame(height: 1).id("bottom")
@@ -153,7 +166,7 @@ struct StudyChatView: View {
                         context.insert(Note(NoteRecord(title: String((chat.selected?.title ?? "Study chat").prefix(100)), body: message.text)))
                         if app.save(context) { savedIDs.insert(message.id) }
                     }.disabled(savedIDs.contains(message.id))
-                    if message.answerKind == "ai" { Text("AI generated").font(.caption2).foregroundStyle(.tertiary) }
+                    if message.answerKind == "ai" { Text(message.model.map { "\($0) · AI generated" } ?? "AI generated").font(.caption2).foregroundStyle(.tertiary) }
                 }.font(.caption)
             }
         }.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(message.role == "user" ? Color.pilot.opacity(0.08) : Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 14))

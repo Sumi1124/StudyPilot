@@ -186,3 +186,11 @@ Calendar uses a tighter fixed toolbar and date sections separated by rules. Shar
 ### App icon (1.11.1)
 
 StudyPilot uses an original open-book mark whose right page folds into a directional pointer, with ivory paper and a sea-glass fold on an ink background. Editable AppKit artwork lives in `Scripts/render-icon.swift`; run `bash Scripts/build-icon.sh` to rebuild the ten-size ICNS and the 1024px PNG in `Resources/Brand/StudyPilot-icon.png`. The app bundle continues to use `Resources/StudyPilot.icns`.
+
+### Optional 0.8B local model (1.12)
+
+AI Chat and Settings now offer Apple Intelligence (the default) or Qwen 3.5 0.8B through Ollama. Model downloads are optional: only the Download 0.8B model button starts one. Choosing Qwen or opening setup checks the local model list without downloading weights. A current Ollama installation is required for the exact `qwen3.5:0.8b-q8_0` package, which is roughly 1 GB. If it is already installed, StudyPilot detects it. The picker remembers the choice and each new generated reply records its model label; there is no automatic fallback to a different model.
+
+Chat traffic is restricted to `http://127.0.0.1:11434`; the ephemeral client disables proxies, cookies, credential storage and HTTP redirects. Qwen receives the same bounded task/calendar context, uses JSON-schema constrained output, and cannot bypass the existing move preview, conflict checks or Apply action. Missing models have setup guidance while saved workspace facts still work. Download status and Stop are available; interrupted downloads can be resumed through Ollama. Apple Intelligence still has its existing macOS 26/hardware requirements. Ollama's 0.8B model is an additional choice, not a guarantee of better answer accuracy.
+
+References: [Ollama chat API](https://docs.ollama.com/api/chat), [structured output](https://docs.ollama.com/capabilities/structured-outputs), and [official Qwen 0.8B Q8 package](https://ollama.com/library/qwen3.5:0.8b-q8_0).
