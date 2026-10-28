@@ -21,3 +21,7 @@ Version 1.3.3 also waits for AppKit’s sheet animation to finish; 1.3.2 could s
 ## Guided first study loop (1.15.0)
 
 Version 1.15.0 adds a short first-run setup for entering a deadline, choosing calendar availability, building a study plan, and starting focus. An optional sample workspace avoids empty sections without changing existing workspaces. The Today view keeps the next step visible until the first deadline → plan → focus loop is complete. Assignment and planner time estimates accept long projects and display the full minute value while editing.
+
+## AI schedule coach (1.16.0)
+
+Version 1.16.0 adds optional AI planning help inside Plan my study. Apple Intelligence or the optional local Qwen model can recommend session length, daily load, and planning horizon from selected deadlines, remaining minutes, subjects, and anonymized free-time totals. The recommendation is review-only until the student presses Use these settings; StudyPilot's deterministic planner still places sessions, checks conflicts, and requires an explicit save. Calendar event names are not included in the coaching request, and the coach is instructed not to solve assignments or generate schoolwork.

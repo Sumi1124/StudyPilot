@@ -89,7 +89,7 @@ public enum StudyPlanner {
         try p.validate()
         guard now.timeIntervalSince1970.isFinite, tasks.count <= 500, busy.count <= 20_000,
               Set(tasks.map(\.id)).count == tasks.count,
-              tasks.allSatisfy({ !$0.id.isEmpty && !$0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (5...2400).contains($0.minutes) && (0...2).contains($0.priority) && $0.deadline.timeIntervalSince1970.isFinite }),
+              tasks.allSatisfy({ !$0.id.isEmpty && !$0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (5...100_000).contains($0.minutes) && (0...2).contains($0.priority) && $0.deadline.timeIntervalSince1970.isFinite }),
               busy.allSatisfy({ $0.start.timeIntervalSince1970.isFinite && $0.end.timeIntervalSince1970.isFinite && $0.start < $0.end })
         else { throw PlanningError.invalid("The planning data contains invalid or excessive tasks or calendar intervals.") }
         let today = calendar.startOfDay(for: now)

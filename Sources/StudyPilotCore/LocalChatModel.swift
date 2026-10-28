@@ -105,6 +105,10 @@ public actor OllamaClient {
         let data = try await chatData(body: EffortEstimation.ollamaBody(input: input))
         return try EffortEstimate.decode(OllamaWire.content(from: data))
     }
+    public func studyPlanAdvice(input: StudyPlanAdviceInput) async throws -> StudyPlanAdvice {
+        let data = try await chatData(body: StudyPlanAdvising.ollamaBody(input: input))
+        return try StudyPlanAdvice.decode(OllamaWire.content(from: data))
+    }
     public func notebookAnswer(input: NotebookQuestion) async throws -> NotebookAnswer {
         let data = try await chatData(body: NotebookResearch.ollamaBody(input: input))
         return try NotebookAnswer.decode(OllamaWire.content(from: data), input: input)

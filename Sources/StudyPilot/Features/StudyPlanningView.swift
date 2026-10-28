@@ -9,6 +9,7 @@ struct StudyPlanningView: View {
     @Environment(\.modelContext) private var context
     @Environment(AppState.self) private var app
     @Environment(FocusController.self) private var focus
+    @Environment(StudyChatService.self) private var chat
     @LiveQuery(sort: \Assignment.dueDate) private var assignments: [Assignment]
     @Environment(CalendarPlanningService.self) private var service
     @LiveQuery(sort: \Subject.name) private var subjects: [Subject]
@@ -24,6 +25,8 @@ struct StudyPlanningView: View {
     @State private var saveToCalendar = false
     @State private var savedFirstDate: Date?
     @State private var savedMessage: String?
+    @State private var planCoach = StudyPlanAdviceController()
+    @State private var coachApplied = false
     private let stepNames = ["Assignments", "Study time", "Review"]
     private var selectedTasks: [PlanningTask] { tasks.filter(\.selected) }
     private var selectedMinutes: Int { selectedTasks.reduce(0) { $0 + $1.minutes } }
@@ -59,7 +62,10 @@ struct StudyPlanningView: View {
                         }
                     }.padding(.horizontal, 28).padding(.bottom, 24)
                 }
-                .onChange(of: step) { proxy.scrollTo("planner-top", anchor: .top) }
+                .onChange(of: step) {
+                    if step != 1 && planCoach.running { planCoach.cancel() }
+                    proxy.scrollTo("planner-top", anchor: .top)
+                }
                 .onChange(of: savedMessage) { proxy.scrollTo("planner-top", anchor: .top) }
             }
             Divider()
@@ -72,6 +78,7 @@ struct StudyPlanningView: View {
             if let folder = context.container.configurations.first?.url.deletingLastPathComponent() { service.configure(folder: folder) }
             saveToCalendar = !service.settings.destinationID.isEmpty
             if service.hasAccess { refresh(); showCalendars = service.settings.deadlineCalendarIDs.isEmpty } else { rebuildTasks() }
+            if chat.models.choice == .qwen08 { await chat.models.refresh() }
         }
         .onChange(of: service.calendarRevision) { if configured { rebuildTasks(); plan = nil } }
         .onChange(of: assignments.map(\.record)) { _, _ in if configured { rebuildTasks(); plan = nil } }
@@ -83,6 +90,7 @@ struct StudyPlanningView: View {
         .onChange(of: service.settings.deadlineCalendarIDs) { _, _ in refreshSources() }
         .onChange(of: service.settings.busyCalendarIDs) { _, _ in plan = nil }
         .onChange(of: service.settings.destinationID) { _, _ in plan = nil }
+        .onDisappear { planCoach.cancel() }
         .interactiveDismissDisabled(busy)
     }
     private var header: some View {
@@ -216,6 +224,7 @@ struct StudyPlanningView: View {
         @Bindable var service = service
         return VStack(alignment: .leading, spacing: 18) {
             sectionTitle("Study hours", detail: "We'll fit sessions inside these hours and around your calendar.")
+            aiCoachCard
             StudyRoutinesView()
             VStack(alignment: .leading, spacing: 18) {
                 Picker("Plan ahead", selection: $service.settings.preferences.days) { Text("7 days").tag(7); Text("14 days").tag(14); Text("28 days").tag(28) }.frame(width: 240)
@@ -253,6 +262,80 @@ struct StudyPlanningView: View {
                 Text("After a session ends, an unchecked study block moves to the next available time before its deadline. Checks run while the app is open and when reopened. Tick finished sessions in Calendar.").font(.caption).foregroundStyle(.secondary)
             }.pilotCard()
         }
+    }
+    private var aiCoachCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles").font(.title2).foregroundStyle(Color.pilot)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("AI schedule coach").font(.headline)
+                    Text("Get settings shaped around this workload and your real free time.").font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Picker("AI model", selection: Binding(get: { chat.models.choice }, set: { selectCoachModel($0) })) {
+                    ForEach(ChatModelChoice.allCases) { Text($0.title).tag($0) }
+                }.labelsHidden().frame(width: 190)
+            }
+            if planCoach.running {
+                HStack(spacing: 12) {
+                    ProgressView().controlSize(.small)
+                    Text("Reviewing deadlines and available study windows…").font(.callout)
+                    Spacer()
+                    Button("Stop") { planCoach.cancel() }
+                }
+            } else if let advice = planCoach.advice {
+                Text(advice.summary).font(.callout.weight(.medium)).textSelection(.enabled)
+                HStack(spacing: 10) {
+                    coachMetric("Session", value: "\(advice.sessionMinutes) min", symbol: "timer")
+                    coachMetric("Daily limit", value: "\(advice.dailyMinutes) min", symbol: "gauge.with.dots.needle.67percent")
+                    coachMetric("Plan ahead", value: "\(advice.planAheadDays) days", symbol: "calendar")
+                }
+                Text(advice.rationale).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+                HStack {
+                    Button(coachApplied ? "Settings applied" : "Use these settings", systemImage: coachApplied ? "checkmark" : "slider.horizontal.3") { applyCoachAdvice(advice) }
+                        .buttonStyle(.borderedProminent).disabled(coachApplied)
+                    Button("Ask again") { requestCoachAdvice() }
+                    Spacer()
+                    Text("Suggested by \(planCoach.model?.title ?? chat.models.choice.title)").font(.caption2).foregroundStyle(.tertiary)
+                }
+            } else {
+                HStack {
+                    Button("Suggest study settings", systemImage: "sparkles") { requestCoachAdvice() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(selectedTasks.isEmpty || chat.unavailableReason != nil)
+                    if selectedTasks.isEmpty { Text("Select at least one assignment first.").font(.caption).foregroundStyle(.secondary) }
+                    else if let reason = chat.unavailableReason { Text(reason).font(.caption).foregroundStyle(.secondary) }
+                }
+            }
+            if let error = planCoach.error { Label(error, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.red).textSelection(.enabled) }
+            Text("Optional and local. The coach receives assignment titles, subjects, deadlines, remaining minutes, and free-time totals—not calendar event names. It only proposes settings; the conflict-checked planner creates the schedule after you review it.")
+                .font(.caption).foregroundStyle(.secondary)
+        }.pilotCard()
+    }
+    private func coachMetric(_ title: String, value: String, symbol: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(title, systemImage: symbol).font(.caption).foregroundStyle(.secondary)
+            Text(value).font(.headline).monospacedDigit()
+        }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.pilot.opacity(0.07), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+    private func selectCoachModel(_ model: ChatModelChoice) {
+        planCoach.invalidate(); coachApplied = false; chat.selectModel(model)
+        if model == .qwen08 { Task { await chat.models.refresh() } }
+    }
+    private func requestCoachAdvice() {
+        do {
+            coachApplied = false
+            planCoach.start(input: try coachInput(), model: chat.models.choice, client: chat.models.client)
+        } catch { service.error = error.localizedDescription }
+    }
+    private func applyCoachAdvice(_ advice: StudyPlanAdvice) {
+        service.settings.preferences.sessionMinutes = advice.sessionMinutes
+        service.settings.preferences.dailyMinutes = advice.dailyMinutes
+        service.settings.preferences.days = advice.planAheadDays
+        coachApplied = true
+        plan = nil
+        persist()
     }
     private var reviewStep: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -395,6 +478,57 @@ struct StudyPlanningView: View {
             item.steps = []
             return item
         }.sorted { $0.deadline < $1.deadline }
+    }
+    private func coachInput() throws -> StudyPlanAdviceInput {
+        try service.settings.preferences.validate()
+        let now = Date()
+        let selectedIDs = Set(selectedTasks.map(\.id))
+        let snapshot = try databaseSnapshot()
+        let localBusy = snapshot.1.map {
+            PlanningBusyTime(start: $0.startDate,
+                             end: $0.startDate.addingTimeInterval(Double($0.durationMinutes * 60)),
+                             taskID: PlannedStudyBlock.taskID(in: $0.details))
+        }
+        let busy = service.busyTimes(excludingTasks: selectedIDs) + localBusy
+        let plannedTasks = selectedTasks.prefix(50).map { task in
+            let assignment = assignments.first { "local:\($0.id.uuidString)" == task.id }
+            let subject = subjects.first { $0.id == assignment?.subjectID }?.name ?? ""
+            return StudyPlanAdviceTask(id: task.id, title: task.title, subject: subject,
+                                       deadline: task.deadline, minutes: task.minutes, priority: task.priority)
+        }
+        let preferences = service.settings.preferences
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: now)
+        let availability = (0..<preferences.days).map { offset -> StudyPlanAvailabilityDay in
+            let day = calendar.date(byAdding: .day, value: offset, to: today) ?? today
+            guard preferences.weekdays.contains(calendar.component(.weekday, from: day)) else {
+                return StudyPlanAvailabilityDay(date: day, availableMinutes: 0)
+            }
+            let start = calendar.date(bySettingHour: preferences.startMinute / 60, minute: preferences.startMinute % 60, second: 0, of: day) ?? day
+            let end = preferences.endMinute == 1440
+                ? (calendar.date(byAdding: .day, value: 1, to: day) ?? day)
+                : (calendar.date(bySettingHour: preferences.endMinute / 60, minute: preferences.endMinute % 60, second: 0, of: day) ?? day)
+            let windowStart = max(start, now)
+            guard windowStart < end else { return StudyPlanAvailabilityDay(date: day, availableMinutes: 0) }
+            let windowMinutes = Int(end.timeIntervalSince(windowStart) / 60)
+            let blocked = mergedBusyMinutes(busy, from: windowStart, to: end)
+            return StudyPlanAvailabilityDay(date: day, availableMinutes: min(preferences.dailyMinutes, max(0, windowMinutes - blocked)))
+        }
+        return StudyPlanAdviceInput(tasks: plannedTasks, preferences: preferences, availability: availability, now: now)
+    }
+    private func mergedBusyMinutes(_ busy: [PlanningBusyTime], from start: Date, to end: Date) -> Int {
+        let intervals = busy.compactMap { item -> DateInterval? in
+            let lower = max(start, item.start), upper = min(end, item.end)
+            return lower < upper ? DateInterval(start: lower, end: upper) : nil
+        }.sorted { $0.start < $1.start }
+        guard var current = intervals.first else { return 0 }
+        var seconds: TimeInterval = 0
+        for interval in intervals.dropFirst() {
+            if interval.start <= current.end { current = DateInterval(start: current.start, end: max(current.end, interval.end)) }
+            else { seconds += current.duration; current = interval }
+        }
+        seconds += current.duration
+        return Int(seconds / 60)
     }
     private func persist() { do { try service.saveSettings(tasks: tasks) } catch { service.error = error.localizedDescription } }
     private func refresh() {
