@@ -2,8 +2,8 @@ import Foundation
 import Testing
 @testable import StudyPilotCore
 
-private func effortJSON(low: Int = 25, likely: Int = 45, high: Int = 75, reason: String = "Several unfamiliar exercises need focused work.", assumption: String = "Assumes twelve short exercises.") throws -> String {
-    String(decoding: try JSONSerialization.data(withJSONObject: ["scope": "Twelve short exercises remain.", "minimumMinutes": low, "minutes": likely, "maximumMinutes": high, "reason": reason, "assumption": assumption]), as: UTF8.self)
+private func effortJSON(low: Int = 25, likely: Int = 45, high: Int = 75, reason: String = "Several unfamiliar exercises need focused work.") throws -> String {
+    String(decoding: try JSONSerialization.data(withJSONObject: ["scope": "Twelve short exercises remain.", "minimumMinutes": low, "minutes": likely, "maximumMinutes": high, "reason": reason]), as: UTF8.self)
 }
 @Test func timeEstimatesValidateOrderedBoundsAndRoundUpToFiveMinutes() throws {
     let value = try EffortEstimate.decode(effortJSON(low: 6, likely: 31, high: 61))
@@ -14,7 +14,7 @@ private func effortJSON(low: Int = 25, likely: Int = 45, high: Int = 75, reason:
     }
 }
 @Test func timeEstimatesRejectMalformedUnboundedAndMissingExplanations() throws {
-    for text in ["not json", "{}", try effortJSON(reason: " "), try effortJSON(assumption: ""), try effortJSON(reason: String(repeating: "a", count: 501)), String(repeating: "a", count: 10_001), #"{"minimumMinutes":10,"minutes":12.5,"maximumMinutes":30,"reason":"x","assumption":"y"}"#] {
+    for text in ["not json", "{}", try effortJSON(reason: " "), try effortJSON(reason: String(repeating: "a", count: 501)), String(repeating: "a", count: 10_001), #"{"scope":"Some remaining work","minimumMinutes":10,"minutes":12.5,"maximumMinutes":30,"reason":"x","assumption":"y"}"#] {
         #expect(throws: (any Error).self) { try EffortEstimate.decode(text) }
     }
 }
@@ -27,6 +27,11 @@ private func effortJSON(low: Int = 25, likely: Int = 45, high: Int = 75, reason:
     #expect(prompt.contains("\"completedChecklistCount\":1")); #expect(prompt.contains("\"remainingChecklistCount\":1"))
     #expect(EffortEstimation.instructions.contains("Do not shrink the work to fit the deadline"))
     #expect(EffortEstimation.instructions.contains("Future booked study sessions are still work left"))
+    #expect(input.basisNote.contains("Uses your description of work left"))
+    #expect(input.basisNote.contains("New to this topic"))
+    #expect(!input.basisNote.contains("wasn't specified"))
+    input.workLeft = ""; input.familiarity = .unspecified
+    #expect(input.basisNote.contains("saved task details")); #expect(input.basisNote.contains("Familiarity wasn't specified"))
     input.completed = true
     #expect(!input.canEstimate); #expect(throws: (any Error).self) { try input.prompt() }
     input.completed = false; input.title = "   "
@@ -48,5 +53,5 @@ private func effortJSON(low: Int = 25, likely: Int = 45, high: Int = 75, reason:
     #expect(body["model"] as? String == OllamaWire.model); #expect(body["stream"] as? Bool == false); #expect(body["think"] as? Bool == false)
     let schema = try #require(body["format"] as? [String: Any]); let properties = try #require(schema["properties"] as? [String: Any])
     #expect(properties["minutes"] != nil); #expect(properties["eventID"] == nil); #expect(properties["steps"] == nil)
-    #expect(properties.keys.count == 6)
+    #expect(properties.keys.count == 5)
 }

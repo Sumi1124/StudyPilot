@@ -47,7 +47,7 @@ private struct TimeEstimatePanel: View {
                     }
                     Text("Scope: " + estimate.scope).font(.callout).textSelection(.enabled)
                     Text(estimate.reason).font(.callout).textSelection(.enabled)
-                    Text("Assumption: " + estimate.assumption).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                    Text("Estimate basis: " + effectiveInput.basisNote).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                     Text("Rough AI estimate · \(controller.model?.title ?? chat.models.choice.title)").font(.caption2).foregroundStyle(.secondary)
                     HStack {
                         Button("Use \(estimate.minutes) min") { apply(estimate.minutes) }.buttonStyle(.borderedProminent)

@@ -15,8 +15,7 @@ import FoundationModels
                 .init(name: "minimumMinutes", description: "Plausible lower bound of remaining focused minutes, integer 5 to 1440.", schema: DynamicGenerationSchema(type: Int.self)),
                 .init(name: "minutes", description: "Likely remaining focused minutes, at least minimumMinutes and at most 1440.", schema: DynamicGenerationSchema(type: Int.self)),
                 .init(name: "maximumMinutes", description: "Plausible upper bound, at least minutes and at most 1440.", schema: DynamicGenerationSchema(type: Int.self)),
-                .init(name: "reason", description: "One short sentence explaining effort. No answers or suggested steps. At most 500 characters.", schema: DynamicGenerationSchema(type: String.self)),
-                .init(name: "assumption", description: "One short sentence identifying genuinely missing information. Never call a supplied quantity unknown. At most 500 characters.", schema: DynamicGenerationSchema(type: String.self))
+                .init(name: "reason", description: "One short sentence explaining effort. No answers or suggested steps. At most 500 characters.", schema: DynamicGenerationSchema(type: String.self))
             ]), dependencies: [])
             let response = try await LanguageModelSession(instructions: EffortEstimation.instructions).respond(to: input.prompt(), schema: schema, options: GenerationOptions(temperature: 0.15, maximumResponseTokens: 600))
             return try EffortEstimate.decode(response.content.jsonString)
