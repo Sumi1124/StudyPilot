@@ -16,6 +16,16 @@ func sampleBackup() -> BackupEnvelope {
     #expect(try BackupCodec.decode(BackupCodec.encode(backup)) == backup)
     #expect(backup.recordCount == 11)
 }
+@Test func ibWorkTypeSurvivesBackupWithoutChangingMYPCriteria() throws {
+    var backup = sampleBackup()
+    backup.assignments[0].ibWorkType = .personalProject
+    #expect(backup.assignments[0].mypCriteria == ["A", "B"])
+    var restored = try BackupCodec.decode(BackupCodec.encode(backup))
+    #expect(restored.assignments[0].ibWorkType == .personalProject)
+    #expect(restored.assignments[0].mypCriteria == ["A", "B"])
+    restored.assignments[0].ibWorkType = .internalAssessment
+    #expect(restored.assignments[0].ibWorkType == .internalAssessment)
+}
 @Test func backupRejectsUnsupportedVersion() {
     var backup = sampleBackup(); backup.version = 999
     #expect(throws: BackupError.self) { try BackupCodec.validate(backup) }

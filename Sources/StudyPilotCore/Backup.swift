@@ -81,7 +81,8 @@ public enum BackupCodec {
             if let completed = item.completedAt { try date(completed) }
             try require(TaskStatus(rawValue: item.status) != nil && (0...2).contains(item.priority), "An assignment status or priority is invalid.")
             try require((5...100_000).contains(item.estimatedMinutes), "Assignment estimates must be at least 5 minutes.")
-            try require(Set(item.criteria).isSubset(of: Set(Criterion.allCases.map(\.rawValue))) && Set(item.criteria).count == item.criteria.count, "Assessment criteria must be unique values A, B, C, or D.")
+            let validCriteria = Set(Criterion.allCases.map(\.rawValue)).union(IBWorkType.allCases.map { "ib-type:\($0.rawValue)" })
+            try require(Set(item.criteria).isSubset(of: validCriteria) && Set(item.criteria).count == item.criteria.count && item.criteria.filter { $0.hasPrefix("ib-type:") }.count <= 1, "Assignment criteria or IB work type is invalid.")
             try unique(item.checklist, "subtasks"); try require(item.checklist.count <= 1000, "An assignment has too many subtasks.")
             for step in item.checklist { try title(step.title) }
         }

@@ -37,7 +37,7 @@
 
 StudyPilot combines the work students usually split across a task manager, calendar, notebook, flashcard app, and timer. Both editions are native desktop apps, store their workspace locally, and do not require an account for their core features. The mature macOS edition has the complete feature set; the new Windows edition begins with assignments, study planning, notes, focus, and backups.
 
-New on macOS in **1.19.0**: select IB MYP or DP in Settings. MYP students can track criteria A–D and Personal Project work; DP students can tag IAs, EE, TOK, CAS, exams, and coursework, see the next deadlines, and track open work in Academic progress. StudyPilot keeps these as personal planning records rather than predicting official IB grades. Repeated study sessions and calendar events still appear once per day with expandable time slots.
+New on macOS in **1.19.1**: select IB MYP or DP in Settings. MYP students can track criteria A–D and Personal Project work; DP students can tag IAs, EE, TOK, CAS, exams, and coursework, see the next deadlines, and track open work in Academic progress. StudyPilot keeps these as personal planning records rather than predicting official IB grades. Repeated study sessions and calendar events still appear once per day with expandable time slots.
 
 <table>
   <tr>
