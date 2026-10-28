@@ -54,6 +54,15 @@ public struct AssignmentRecord: Codable, Equatable, Identifiable, Sendable {
     public var checklist: [ChecklistItem]
     public var createdAt: Date
     public var completedAt: Date?
+    /// Stored in the existing criteria array to keep older workspaces and JSON backups readable.
+    public var ibWorkType: IBWorkType? {
+        get { criteria.filter { $0.hasPrefix("ib-type:") }.compactMap { IBWorkType(rawValue: String($0.dropFirst("ib-type:".count))) }.first }
+        set {
+            criteria.removeAll { $0.hasPrefix("ib-type:") }
+            if let newValue { criteria.append("ib-type:\(newValue.rawValue)") }
+        }
+    }
+    public var mypCriteria: [String] { criteria.filter { ["A", "B", "C", "D"].contains($0) } }
     public init(id: UUID = UUID(), title: String = "", details: String = "", subjectID: UUID? = nil, projectID: UUID? = nil, dueDate: Date = Date(), reminderDate: Date? = nil, priority: Int = 1, status: String = "To do", estimatedMinutes: Int = 30, criteria: [String] = [], checklist: [ChecklistItem] = [], createdAt: Date = Date(), completedAt: Date? = nil) {
         self.id = id
         self.title = title
@@ -70,6 +79,21 @@ public struct AssignmentRecord: Codable, Equatable, Identifiable, Sendable {
         self.createdAt = createdAt
         self.completedAt = completedAt
     }
+}
+
+public enum IBWorkType: String, CaseIterable, Identifiable, Sendable {
+    case mypClassTask = "MYP class task"
+    case mypAssessment = "MYP assessment"
+    case personalProject = "Personal project"
+    case dpCoursework = "DP coursework"
+    case internalAssessment = "Internal assessment"
+    case extendedEssay = "Extended essay"
+    case tok = "Theory of knowledge"
+    case cas = "CAS"
+    case dpExam = "DP exam"
+    public var id: String { rawValue }
+    public var programme: String { rawValue.hasPrefix("MYP") || self == .personalProject ? "MYP" : "DP" }
+    public static func choices(for programme: String) -> [IBWorkType] { allCases.filter { $0.programme == programme } }
 }
 
 public struct NotebookRecord: Codable, Equatable, Identifiable, Sendable {

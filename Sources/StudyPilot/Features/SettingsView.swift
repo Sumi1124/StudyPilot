@@ -13,6 +13,7 @@ struct SettingsView: View {
     @AppStorage("displayName") private var displayName = ""
     @AppStorage("appearance") private var appearance = "System"
     @AppStorage("remindersEnabled") private var remindersEnabled = false
+    @AppStorage("ibProgramme") private var ibProgramme = "General"
     @State private var backups: [URL] = []
     @State private var candidate: BackupEnvelope?
     @State private var candidateName = ""
@@ -25,6 +26,12 @@ struct SettingsView: View {
                 Section("Your workspace") {
                     TextField("Preferred name", text: $displayName)
                     Picker("Appearance", selection: $appearance) { ForEach(["System", "Light", "Dark"], id: \.self) { Text($0) } }
+                    Picker("School programme", selection: $ibProgramme) {
+                        Text("General").tag("General")
+                        Text("IB MYP").tag("MYP")
+                        Text("IB DP").tag("DP")
+                    }
+                    Text("Choose MYP or DP to show relevant assignment types and progress. You can change this later without changing your saved work.").font(.caption).foregroundStyle(.secondary)
                     Button("Run setup guide again", systemImage: "wand.and.stars") {
                         dismiss()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { app.showingFirstRunSetup = true }

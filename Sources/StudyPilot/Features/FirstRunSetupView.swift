@@ -21,6 +21,7 @@ struct FirstRunSetupView: View {
     @State private var sampleLoaded = false
     @State private var working = false
     @State private var message: String?
+    @AppStorage("ibProgramme") private var ibProgramme = "General"
     let complete: (FirstRunDestination) -> Void
 
     private let steps = ["Welcome", "Deadline", "Calendar", "Ready"]
@@ -82,6 +83,12 @@ struct FirstRunSetupView: View {
                 Text("Turn one deadline into a calm plan.").font(.system(size: 34, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
                 Text("Add the work, let StudyPilot protect your existing calendar time, and begin one focused session. You can explore everything else later.")
                     .font(.title3).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Picker("School programme", selection: $ibProgramme) {
+                    Text("General").tag("General")
+                    Text("IB MYP").tag("MYP")
+                    Text("IB DP").tag("DP")
+                }.pickerStyle(.segmented)
+                Text("This adjusts assignment types and progress. You can change it in Settings.").font(.caption).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 13) {
                     journeyRow(1, "Enter a real deadline", "Give the planner a task and a clear amount of work.")
                     journeyRow(2, "Plan around your calendar", "Classes and commitments stay protected.")

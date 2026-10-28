@@ -19,11 +19,14 @@ struct AssignmentsView: View {
     @State private var selecting = false
     @State private var selectedIDs: Set<UUID> = []
     @State private var bulkMessage: String?
+    @AppStorage("ibProgramme") private var ibProgramme = "General"
+    @State private var workType: IBWorkType?
 
     private var filtered: [Assignment] {
         let result = assignments.filter { item in
             (status == "All" || (status == "Active" ? !item.isDone : item.status == status)) &&
             (subjectID == nil || item.subjectID == subjectID) && (projectID == nil || item.projectID == projectID) &&
+            (workType == nil || item.record.ibWorkType == workType) &&
             (search.isEmpty || "\(item.title) \(item.details)".localizedCaseInsensitiveContains(search)) && app.assignmentTimeFilter.includes(item.record, now: app.now)
         }
         return result.sorted {
@@ -37,7 +40,8 @@ struct AssignmentsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                PageHeading(eyebrow: "Make room for your best work", title: "Assignments", subtitle: "Deadlines, priorities, and your own checklists.")
+                PageHeading(eyebrow: ibProgramme == "General" ? "Make room for your best work" : "IB \(ibProgramme) WORKSPACE", title: "Assignments", subtitle: ibProgramme == "MYP" ? "Keep criteria, class work, and your Personal Project together." : ibProgramme == "DP" ? "Track coursework, IAs, EE, TOK, CAS, and exams by deadline." : "Deadlines, priorities, and your own checklists.")
+                if ibProgramme != "General" { ibOverview }
                 QuickTaskEntry().pilotCard()
                 Picker("Deadline filter", selection: Binding(get: { app.assignmentTimeFilter }, set: { app.assignmentTimeFilter = $0 })) {
                     ForEach(AssignmentTimeFilter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -52,6 +56,12 @@ struct AssignmentsView: View {
                     Picker("Project", selection: $projectID) {
                         Text("All projects").tag(nil as UUID?)
                         ForEach(projects) { Text($0.title).tag(Optional($0.id)) }
+                    }.frame(maxWidth: 300)
+                }
+                if ibProgramme != "General" {
+                    Picker("IB work type", selection: $workType) {
+                        Text("All work types").tag(nil as IBWorkType?)
+                        ForEach(IBWorkType.choices(for: ibProgramme)) { type in Text(type.rawValue).tag(Optional(type)) }
                     }.frame(maxWidth: 300)
                 }
                 HStack {
@@ -99,6 +109,22 @@ struct AssignmentsView: View {
         .onChange(of: app.selectedAssignmentID) { openSelection() }
         .onChange(of: assignments.map(\.id)) { openSelection() }
         .onChange(of: app.selectedProjectID) { projectID = app.selectedProjectID }
+        .onChange(of: ibProgramme) { workType = nil }
+    }
+    private var ibOverview: some View {
+        let active = assignments.filter { !$0.isDone }
+        let relevant = active.filter { $0.record.ibWorkType?.programme == ibProgramme }
+        return HStack(spacing: 12) {
+            ibStat("Open IB work", value: "\(relevant.count)", symbol: "books.vertical")
+            ibStat("Due this week", value: "\(relevant.filter { $0.dueDate <= Date().addingTimeInterval(7 * 86400) }.count)", symbol: "calendar")
+            ibStat("Study time left", value: "\(relevant.reduce(0) { $0 + $1.estimatedMinutes }) min", symbol: "timer")
+        }
+    }
+    private func ibStat(_ title: String, value: String, symbol: String) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Label(title, systemImage: symbol).font(.caption).foregroundStyle(.secondary)
+            Text(value).font(.title3.weight(.semibold)).monospacedDigit()
+        }.frame(maxWidth: .infinity, alignment: .leading).pilotCard()
     }
     private func applyBulk(_ action: AssignmentBulkAction) {
         let updates = AssignmentActions.updates(records: assignments.map(\.record), selectedIDs: selectedIDs, visibleIDs: Set(filtered.map(\.id)), action: action, now: Date())
@@ -133,7 +159,8 @@ struct AssignmentRow: View {
                     Text(assignment.title).font(.system(size: 14, weight: .semibold)).strikethrough(assignment.isDone).foregroundStyle(.primary)
                     HStack(spacing: 12) {
                         SubjectBadge(subject: subject)
-                        if !assignment.criteria.isEmpty { Text("Criterion " + assignment.criteria.joined(separator: ", ")).font(.caption).foregroundStyle(.secondary) }
+                        if let type = assignment.record.ibWorkType { Text(type.rawValue).font(.caption.weight(.medium)).foregroundStyle(Color.pilot) }
+                        if !assignment.record.mypCriteria.isEmpty { Text("Criterion " + assignment.record.mypCriteria.joined(separator: ", ")).font(.caption).foregroundStyle(.secondary) }
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
             }.buttonStyle(.plain)
@@ -193,6 +220,7 @@ struct AssignmentEditor: View {
     @State private var reminder: Bool
     @State private var newStep = ""
     @State private var validation: String?
+    @AppStorage("ibProgramme") private var ibProgramme = "General"
     init(assignment: Assignment? = nil, date: Date? = nil) {
         self.assignment = assignment
         let record = assignment?.record ?? AssignmentRecord(dueDate: date ?? Calendar.current.date(byAdding: .day, value: 1, to: Date())!)
@@ -205,6 +233,12 @@ struct AssignmentEditor: View {
                 TextField("Title", text: $draft.title)
                 TextField("Description", text: $draft.details, axis: .vertical).lineLimit(3...6)
                 SubjectPicker(subjects: subjects, selection: $draft.subjectID)
+                if ibProgramme != "General" || draft.ibWorkType != nil {
+                    Picker("IB work type", selection: Binding(get: { draft.ibWorkType }, set: { draft.ibWorkType = $0 })) {
+                        Text("Class assignment").tag(nil as IBWorkType?)
+                        ForEach(IBWorkType.choices(for: ibProgramme == "General" ? (draft.ibWorkType?.programme ?? "MYP") : ibProgramme)) { type in Text(type.rawValue).tag(Optional(type)) }
+                    }
+                }
                 Picker("Project", selection: $draft.projectID) {
                     Text("No project").tag(nil as UUID?)
                     ForEach(projects) { Text($0.title).tag(Optional($0.id)) }
@@ -223,7 +257,7 @@ struct AssignmentEditor: View {
                     Stepper("Adjust estimated minutes", value: $draft.estimatedMinutes, in: 5...100_000, step: 5).labelsHidden()
                 }
                 TimeEstimateButton(input: EffortEstimateInput(id: draft.id.uuidString, title: draft.title, details: draft.details, subject: subjects.first { $0.id == draft.subjectID }?.name ?? "", deadline: draft.dueDate, checklist: draft.checklist, completed: draft.status == TaskStatus.done.rawValue), minutes: $draft.estimatedMinutes)
-                HStack {
+                if ibProgramme == "MYP" || !draft.mypCriteria.isEmpty { HStack {
                     Text("MYP criteria"); Spacer()
                     ForEach(Criterion.allCases) { criterion in
                         Toggle(criterion.rawValue, isOn: Binding(get: { draft.criteria.contains(criterion.rawValue) }, set: { enabled in
@@ -231,7 +265,7 @@ struct AssignmentEditor: View {
                             if enabled { draft.criteria.append(criterion.rawValue); draft.criteria.sort() }
                         })).toggleStyle(.button)
                     }
-                }
+                } }
                 Toggle("Remind me", isOn: $reminder)
                 if reminder {
                     DatePicker("Reminder", selection: Binding(get: { draft.reminderDate ?? draft.dueDate.addingTimeInterval(-3600) }, set: { draft.reminderDate = $0 }))

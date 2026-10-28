@@ -37,3 +37,7 @@ Version 1.18.0 reorganizes Calendar around the questions students need answered:
 ## Repeated calendar items (1.18.1)
 
 Version 1.18.1 groups same titled study sessions and other calendar events within each day. A topic such as Math sheet appears once with its session count and combined study time. Expand it to see each time slot and check off individual sessions. Week and Month cells also show the title once with a compact count badge.
+
+## IB MYP and DP workspace (1.19.0)
+
+Version 1.19.0 adds a school programme choice in Settings. MYP assignments can be tagged as class tasks, assessments, or Personal Project work while retaining criteria A–D. DP assignments can be tagged as coursework, internal assessments, Extended Essay, Theory of Knowledge, CAS, or exams. The Assignments screen adds a work type filter and workload summary. Academic progress shows the existing MYP criterion view for MYP students and a DP deadline and core work overview for DP students. Tags are stored with assignment records and included in existing JSON backups. These are personal planning tools, not official IB grade calculations.

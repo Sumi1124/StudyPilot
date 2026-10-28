@@ -9,6 +9,8 @@ struct AcademicProgressView: View {
     @Environment(AppState.self) private var app
     @LiveQuery(sort: \Subject.name) private var subjects: [Subject]
     @LiveQuery(sort: \Assessment.date, order: .reverse) private var assessments: [Assessment]
+    @LiveQuery(sort: \Assignment.dueDate) private var assignments: [Assignment]
+    @AppStorage("ibProgramme") private var ibProgramme = "General"
     @State private var selectedID: UUID?
     @State private var adding = false
     @State private var editing: Assessment?
@@ -19,7 +21,8 @@ struct AcademicProgressView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                PageHeading(eyebrow: "Notice how far you’ve come", title: "Academic progress", subtitle: "Assessments and progress by subject.")
+                PageHeading(eyebrow: "Notice how far you’ve come", title: "Academic progress", subtitle: ibProgramme == "DP" ? "Your DP workload and core deadlines." : "MYP criterion results and progress by subject.")
+                if ibProgramme == "DP" { dpProgress } else {
                 HStack {
                     Picker("Subject", selection: $selectedID) { ForEach(subjects) { Text($0.name).tag(Optional($0.id)) } }.frame(maxWidth: 350)
                     Spacer()
@@ -79,6 +82,7 @@ struct AcademicProgressView: View {
                     }
                     if results.isEmpty { Text("No results recorded for this subject yet.").foregroundStyle(.secondary) }
                 }.pilotCard()
+                }
             }.padding(30)
         }
         .onAppear { selectedID = app.selectedSubjectID ?? subjects.first?.id; app.selectedSubjectID = nil }
@@ -91,6 +95,43 @@ struct AcademicProgressView: View {
             Button("Cancel", role: .cancel) { deleting = nil }
             Button("Delete", role: .destructive) { if let deleting { context.delete(deleting); app.save(context) }; deleting = nil }
         } message: { Text("This assessment will be removed from your history and progress charts.") }
+    }
+    private var dpProgress: some View {
+        let dp = assignments.filter { $0.record.ibWorkType?.programme == "DP" }
+        let upcoming = dp.filter { !$0.isDone }.sorted { $0.dueDate < $1.dueDate }
+        return VStack(alignment: .leading, spacing: 18) {
+            Label("Track your DP work without turning task completion into an estimated IB score.", systemImage: "info.circle")
+                .font(.callout).foregroundStyle(.secondary).pilotCard()
+            HStack(spacing: 12) {
+                dpCard("IAs", type: .internalAssessment, in: dp)
+                dpCard("Extended essay", type: .extendedEssay, in: dp)
+                dpCard("TOK", type: .tok, in: dp)
+                dpCard("CAS", type: .cas, in: dp)
+            }
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Next DP deadlines").font(.headline)
+                if upcoming.isEmpty { Text("Tag an assignment with a DP work type to see it here.").foregroundStyle(.secondary) }
+                ForEach(upcoming.prefix(6)) { task in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(task.title).font(.callout.weight(.semibold))
+                            Text(task.record.ibWorkType?.rawValue ?? "DP work").font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(task.dueDate, format: .dateTime.month(.abbreviated).day()).font(.caption).foregroundStyle(.secondary)
+                    }
+                    if task.id != upcoming.prefix(6).last?.id { Divider() }
+                }
+            }.pilotCard()
+        }
+    }
+    private func dpCard(_ title: String, type: IBWorkType, in tasks: [Assignment]) -> some View {
+        let matching = tasks.filter { $0.record.ibWorkType == type }
+        return VStack(alignment: .leading, spacing: 7) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text("\(matching.filter { !$0.isDone }.count) open").font(.title3.weight(.semibold))
+            Text("\(matching.filter(\.isDone).count) finished").font(.caption).foregroundStyle(.secondary)
+        }.frame(maxWidth: .infinity, alignment: .leading).pilotCard()
     }
 }
 struct AssessmentEditor: View {
