@@ -50,7 +50,7 @@ Day intervals use calendar arithmetic to preserve local time across daylight-sav
 
 `BackupCodec` validates all records, relationships, IDs, numeric ranges, text limits, schedules, and supported versions. Restoration checks everything before mutation, temporarily disables autosave, updates matching IDs, inserts new IDs, removes absent IDs, and saves once. Failure rolls back pending changes. The UI creates a complete pre-restore snapshot first; if this backup cannot be written, restoration never begins. JSON writes use atomic replacement.
 
-The application does not upload the workspace database or use an analytics SDK. Local notifications use UserNotifications. The optional calendar workflow writes only the reviewed study blocks to the selected EventKit calendar; macOS syncs these to that calendar's provider. On-device AI receives only the selected assignment title and description.
+The application does not upload the workspace database or use an analytics SDK. Local notifications use UserNotifications. The optional calendar workflow writes reviewed changes to the selected EventKit calendar; macOS syncs these to that calendar's provider. Local AI receives the task context or selected source excerpts described by each feature. Chat context settings control access to workspace/calendar context; notebook questions use only checked source excerpts.
 
 ## Google Calendar and study planning
 
