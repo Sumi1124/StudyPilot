@@ -32,8 +32,11 @@ struct PlannerCalendarView: View {
     private var weekDays: [Date] { (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: weekStart) } }
     private var agendaDays: [Date] { (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: calendar.startOfDay(for: selected)) } }
     private var readRange: DateInterval {
+        if mode == "Month", let first = days.first, let last = days.last {
+            return DateInterval(start: first, end: calendar.date(byAdding: .day, value: 1, to: last)!)
+        }
         let start = mode == "Week" ? weekStart : calendar.startOfDay(for: selected)
-        return DateInterval(start: start, end: calendar.date(byAdding: .day, value: mode == "Month" ? 1 : 7, to: start)!)
+        return DateInterval(start: start, end: calendar.date(byAdding: .day, value: 7, to: start)!)
     }
     private var days: [Date] {
         if mode == "Week" { return weekDays }
@@ -53,12 +56,15 @@ struct PlannerCalendarView: View {
                         Color.clear.frame(height: 0).id("calendar-top")
                         if mode == "Agenda" {
                             weekSummary
-                            ForEach(agendaDays, id: \.self) { day in agendaDay(day) }
+                            ForEach(agendaDays, id: \.self) { day in
+                                if !items(on: day).isEmpty || calendar.isDate(day, inSameDayAs: selected) || calendar.isDateInToday(day) { agendaDay(day) }
+                            }
                         } else {
                             grid
                             agendaDay(selected)
                         }
-                        DisclosureGroup("Study block checklist") { StudySessionsView() }.font(.headline)
+                        DisclosureGroup("Manage every study block") { StudySessionsView() }
+                            .font(.headline).padding(18).background(Color(nsColor: .controlBackgroundColor).opacity(0.8), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }.padding(.horizontal, 26).padding(.bottom, 26)
                 }
                 .onChange(of: selected) { if mode == "Agenda" { proxy.scrollTo("calendar-top", anchor: .top) } }
@@ -79,98 +85,160 @@ struct PlannerCalendarView: View {
         } message: { Text("The event and its reminder will be removed.") }
     }
     private var navigation: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 16) {
-                Text("Calendar").font(.system(size: 24, weight: .semibold))
-                Picker("View", selection: $mode) { Text("Agenda").tag("Agenda"); Text("Week").tag("Week"); Text("Month").tag("Month") }.pickerStyle(.segmented).labelsHidden().frame(width: 210)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 18) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("YOUR SCHOOL WEEK").font(.system(size: 10, weight: .semibold)).tracking(0.8).foregroundStyle(Color.pilot)
+                    Text("Calendar").font(.system(size: 30, weight: .semibold, design: .rounded))
+                    Text("Deadlines, study blocks, and other commitments—kept separate.").font(.callout).foregroundStyle(.secondary)
+                }
                 Spacer()
-                Button("Plan my study") { app.showingStudyPlanner = true }.buttonStyle(.bordered)
+                Button("Plan my study", systemImage: "calendar.badge.clock") { app.showingStudyPlanner = true }.buttonStyle(.bordered)
                 Button("Add event", systemImage: "plus") { adding = true }.buttonStyle(.borderedProminent)
             }
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
+                Picker("View", selection: $mode) { Text("List").tag("Agenda"); Text("Week").tag("Week"); Text("Month").tag("Month") }.pickerStyle(.segmented).labelsHidden().frame(width: 230)
+                Divider().frame(height: 24)
                 Button { move(-1) } label: { Image(systemName: "chevron.left") }.help(mode == "Month" ? "Previous month" : "Previous week")
-                DatePicker("Selected date", selection: $selected, displayedComponents: .date).labelsHidden().frame(width: 130)
+                Text(periodTitle).font(.system(size: 14, weight: .semibold)).frame(minWidth: 145)
                 Button { move(1) } label: { Image(systemName: "chevron.right") }.help(mode == "Month" ? "Next month" : "Next week")
                 Button("Today") { selected = Date() }
                 Spacer(minLength: 8)
-                TextField("Search calendar", text: $search).textFieldStyle(.roundedBorder).frame(maxWidth: 240)
-                Toggle("Hide completed", isOn: $hideCompleted).toggleStyle(.checkbox).font(.caption)
+                HStack(spacing: 8) { Image(systemName: "magnifyingglass").foregroundStyle(.secondary); TextField("Find a deadline or event", text: $search).textFieldStyle(.plain) }
+                    .padding(.horizontal, 11).padding(.vertical, 8).frame(maxWidth: 260)
+                    .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.primary.opacity(0.07), lineWidth: 0.5))
+                Menu {
+                    Toggle("Hide completed", isOn: $hideCompleted)
+                } label: { Label(hideCompleted ? "Active only" : "All items", systemImage: "line.3.horizontal.decrease.circle") }
                 Button { refreshSynced() } label: { Image(systemName: "arrow.clockwise") }.disabled(!planning.hasAccess).help("Refresh synced calendars")
             }
-            HStack(spacing: 8) {
-                Text(planning.hasAccess ? "Selected calendars + StudyPilot\(syncedAt.map { " · updated " + $0.formatted(date: .omitted, time: .shortened) } ?? "")" : "StudyPilot calendar")
-                if !planning.hasAccess { Button("Connect calendars…") { app.showingStudyPlanner = true }.buttonStyle(.link) }
-            }.font(.caption).foregroundStyle(.secondary)
-            if let syncError { Text(syncError).font(.caption).foregroundStyle(.red) }
-            if let message = planning.completionCleanupMessage { Text(message).font(.caption).foregroundStyle(.orange) }
-        }.padding(.horizontal, 24).padding(.vertical, 16).background(.bar)
+            HStack(spacing: 10) {
+                Label(planning.hasAccess ? "Calendars connected" : "StudyPilot only", systemImage: planning.hasAccess ? "checkmark.circle.fill" : "calendar")
+                    .foregroundStyle(planning.hasAccess ? Color.pilot : Color.secondary)
+                if let syncedAt, planning.hasAccess { Text("Updated \(syncedAt.formatted(date: .omitted, time: .shortened))").foregroundStyle(.secondary) }
+                if !planning.hasAccess { Button("Connect Google Calendar") { app.showingStudyPlanner = true }.buttonStyle(.link) }
+                Spacer()
+                legend("Deadline", color: .pilotBlue, symbol: "flag.fill")
+                legend("Study block", color: .pilot, symbol: "timer")
+                legend("Other event", color: Color(nsColor: .secondaryLabelColor), symbol: "calendar")
+            }.font(.caption)
+            if let syncError { Label(syncError, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.red) }
+            if let message = planning.completionCleanupMessage {
+                HStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+                    Text(message).font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Reconnect") { app.showingStudyPlanner = true }.buttonStyle(.bordered).controlSize(.small)
+                }.padding(10).background(.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            }
+        }.padding(.horizontal, 26).padding(.vertical, 18).background(.bar)
+    }
+    private var periodTitle: String {
+        if mode == "Month" { return selected.formatted(.dateTime.month(.wide).year()) }
+        let start = mode == "Week" ? weekStart : calendar.startOfDay(for: selected)
+        let end = calendar.date(byAdding: .day, value: 6, to: start) ?? start
+        return "\(start.formatted(.dateTime.month(.abbreviated).day())) – \(end.formatted(.dateTime.month(.abbreviated).day()))"
+    }
+    private func legend(_ title: String, color: Color, symbol: String) -> some View {
+        Label(title, systemImage: symbol).foregroundStyle(color)
     }
     private var weekSummary: some View {
         let tasks = assignments.filter { taskVisible($0) && $0.dueDate >= readRange.start && $0.dueDate < readRange.end }
         let local = events.filter { localVisible($0) && $0.startDate < readRange.end && $0.startDate.addingTimeInterval(Double($0.durationMinutes * 60)) > readRange.start }
         let external = synced.filter { externalVisible($0) && $0.start < readRange.end && ($0.end > readRange.start || ($0.start == $0.end && $0.start >= readRange.start)) }
-        let sessions = local.count + external.count
+        let study = local.count + external.filter { $0.ownTaskID != nil }.count
+        let other = external.filter { $0.ownTaskID == nil }.count
         let minutes = local.reduce(0) { $0 + max(0, Int(min(readRange.end, $1.startDate.addingTimeInterval(Double($1.durationMinutes * 60))).timeIntervalSince(max(readRange.start, $1.startDate)) / 60)) }
-            + external.filter { !$0.allDay }.reduce(0) { $0 + max(0, Int(min(readRange.end, $1.end).timeIntervalSince(max(readRange.start, $1.start)) / 60)) }
+            + external.filter { $0.ownTaskID != nil && !$0.allDay }.reduce(0) { $0 + max(0, Int(min(readRange.end, $1.end).timeIntervalSince(max(readRange.start, $1.start)) / 60)) }
         return VStack(alignment: .leading, spacing: 14) {
-            HStack { Text("\(readRange.start.formatted(.dateTime.month(.abbreviated).day())) – \(agendaDays.last!.formatted(.dateTime.month(.abbreviated).day()))").font(.headline); Spacer(); Text("Filtered totals").font(.caption).foregroundStyle(.secondary) }
-            HStack(spacing: 30) {
-                statistic("Local deadlines", value: "\(tasks.count)", symbol: "flag")
-                statistic("Calendar events", value: "\(sessions)", symbol: "calendar")
-                statistic("Timed events", value: "\(minutes) min", symbol: "clock")
-                Spacer()
+            HStack { Text(periodTitle).font(.headline); Spacer(); Text(search.isEmpty ? "7-day overview" : "Matching items").font(.caption).foregroundStyle(.secondary) }
+            HStack(spacing: 12) {
+                statistic("Deadlines", value: "\(tasks.count)", symbol: "flag.fill", color: .pilotBlue)
+                statistic("Study blocks", value: "\(study)", symbol: "timer", color: .pilot)
+                statistic("Study time", value: "\(minutes) min", symbol: "clock", color: .pilot)
+                statistic("Other events", value: "\(other)", symbol: "calendar", color: Color(nsColor: .secondaryLabelColor))
             }
-            Text("Timed events include classes and other commitments; deadlines are separate.").font(.caption).foregroundStyle(.secondary)
-        }.padding(.vertical, 12).overlay(alignment: .bottom) { Divider() }
+        }.pilotCard()
     }
-    private func statistic(_ title: String, value: String, symbol: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) { Label(title, systemImage: symbol).font(.caption).foregroundStyle(.secondary); Text(value).font(.system(size: 21, weight: .medium)).monospacedDigit() }
+    private func statistic(_ title: String, value: String, symbol: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Label(title, systemImage: symbol).font(.caption.weight(.semibold)).foregroundStyle(color)
+            Text(value).font(.system(size: 21, weight: .semibold, design: .rounded)).monospacedDigit()
+        }.padding(12).frame(maxWidth: .infinity, alignment: .leading).background(color.opacity(0.055), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
     private var grid: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(selected, format: .dateTime.month(.wide).year()).font(.headline)
-            Text("Grid: StudyPilot items. Synced events are included in the agenda below.").font(.caption).foregroundStyle(.secondary)
+            Text(mode == "Week" ? "Choose a day for its full schedule. The grid shows only the first few items." : "Choose a day for its full schedule below.").font(.caption).foregroundStyle(.secondary)
             HStack { ForEach(0..<7, id: \.self) { index in Text(calendar.shortWeekdaySymbols[(calendar.firstWeekday - 1 + index) % 7]).font(.caption.bold()).foregroundStyle(.secondary).frame(maxWidth: .infinity) } }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) { ForEach(days, id: \.self) { day in dayCell(day) } }
         }.pilotCard()
     }
     private func agendaDay(_ day: Date) -> some View {
-        let entries = items(on: day)
+        let tasks = assignments.filter { taskVisible($0) && calendar.isDate($0.dueDate, inSameDayAs: day) }
+        let local = events.filter { localVisible($0) && SchoolAgenda.occurs(start: $0.startDate, end: $0.startDate.addingTimeInterval(Double($0.durationMinutes * 60)), on: day) }
+        let external = synced.filter { externalVisible($0) && SchoolAgenda.occurs(start: $0.start, end: $0.end, on: day) }
+        let study = external.filter { $0.ownTaskID != nil }
+        let other = external.filter { $0.ownTaskID == nil }
+        let count = tasks.count + local.count + external.count
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(day, format: .dateTime.weekday(.wide)).font(.system(size: 16, weight: .semibold))
                 Text(day, format: .dateTime.month(.abbreviated).day()).font(.callout).foregroundStyle(.secondary)
                 if calendar.isDateInToday(day) { Text("Today").font(.caption.weight(.medium)).foregroundStyle(Color.pilot) }
                 Spacer()
-                Text("\(entries.count) item\(entries.count == 1 ? "" : "s")").font(.caption).foregroundStyle(.secondary)
+                Text("\(count) item\(count == 1 ? "" : "s")").font(.caption).foregroundStyle(.secondary)
                 Button { selected = day; adding = true } label: { Image(systemName: "plus") }.buttonStyle(.plain).foregroundStyle(.secondary).help("Add event on \(day.formatted(date: .abbreviated, time: .omitted))")
             }.padding(.bottom, 6)
-            if entries.isEmpty { Text(search.isEmpty ? "No deadlines or events." : "No matches on this day.").font(.callout).foregroundStyle(.secondary).padding(.vertical, 8) }
-            ForEach(entries) { entry in
-                switch entry {
-                case .task(let task):
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("Deadline").font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
-                        AssignmentRow(assignment: task, subject: subject(task.subjectID)) { editingTask = task }
-                    }
-                case .local(let event): localRow(event)
-                case .synced(let event): externalRow(event)
-                }
-                if entry.id != entries.last?.id { Divider() }
+            if count == 0 {
+                HStack(spacing: 12) { Image(systemName: "calendar.badge.checkmark").font(.title3).foregroundStyle(Color.pilot); Text(search.isEmpty ? "Nothing scheduled and no deadlines on this day." : "No matches on this day.").font(.callout).foregroundStyle(.secondary) }
+                    .padding(.vertical, 12)
             }
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12).overlay(alignment: .bottom) { Divider() }
+            if !tasks.isEmpty { agendaSection("Deadlines", count: tasks.count, symbol: "flag.fill", color: .pilotBlue) { ForEach(tasks) { deadlineRow($0) } } }
+            if !local.isEmpty || !study.isEmpty {
+                agendaSection("Study blocks", count: local.count + study.count, symbol: "timer", color: .pilot) {
+                    ForEach(local) { localRow($0) }
+                    ForEach(study) { externalRow($0) }
+                }
+            }
+            if !other.isEmpty { agendaSection("Other calendar events", count: other.count, symbol: "calendar", color: Color(nsColor: .secondaryLabelColor)) { ForEach(other) { externalRow($0) } } }
+        }.frame(maxWidth: .infinity, alignment: .leading).pilotCard()
+    }
+    private func agendaSection<Content: View>(_ title: String, count: Int, symbol: String, color: Color, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack { Label(title, systemImage: symbol).font(.caption.weight(.semibold)).foregroundStyle(color); Spacer(); Text("\(count)").font(.caption).monospacedDigit().foregroundStyle(.secondary) }
+            content()
+        }.padding(.top, 4)
+    }
+    private func deadlineRow(_ task: Assignment) -> some View {
+        HStack(spacing: 12) {
+            Toggle("Complete \(task.title)", isOn: Binding(get: { task.isDone }, set: { _ in app.toggleCompletion(task, context: context) })).labelsHidden().toggleStyle(.checkbox)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(task.title).font(.system(size: 13, weight: .semibold)).strikethrough(task.isDone)
+                HStack(spacing: 7) {
+                    SubjectBadge(subject: subject(task.subjectID))
+                    Text("Due \(task.dueDate.formatted(date: .omitted, time: .shortened))").foregroundStyle(.secondary)
+                    Text("\(task.estimatedMinutes) min left").foregroundStyle(.secondary)
+                }.font(.caption)
+            }
+            Spacer()
+            Button("Edit") { editingTask = task }.buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
+        }.padding(12).background(Color.pilotBlue.opacity(0.045), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
     private func localRow(_ event: PlannerEvent) -> some View {
         HStack(spacing: 14) {
             Toggle("Complete \(event.title)", isOn: Binding(get: { StudyBlockTracking.read(event.details).completedAt != nil }, set: { done in do { try planning.setCompleted(done, local: event, context: context) } catch { app.error = error.localizedDescription } })).labelsHidden().toggleStyle(.checkbox)
+            timeBadge(event.startDate, allDay: false)
             VStack(alignment: .leading, spacing: 5) {
-                Text(event.title).font(.system(size: 13, weight: .medium)).strikethrough(StudyBlockTracking.read(event.details).completedAt != nil)
-                Text(localTimeLabel(event)).font(.caption).foregroundStyle(.secondary)
+                Text(event.title.replacingOccurrences(of: "Study: ", with: "")).font(.system(size: 13, weight: .semibold)).strikethrough(StudyBlockTracking.read(event.details).completedAt != nil)
+                Text("\(event.durationMinutes) min · StudyPilot").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
             if let id = PlannedStudyBlock.taskID(in: event.details) { FinishStudyTaskButton(taskID: id, title: event.title) }
             Button("Edit") { editingEvent = event }.buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
-        }.padding(.vertical, 8).contextMenu { Button("Delete event…", role: .destructive) { deleting = event } }
+        }.padding(12).background(Color.pilot.opacity(0.045), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .contextMenu { Button("Delete event…", role: .destructive) { deleting = event } }
     }
     private func localTimeLabel(_ event: PlannerEvent) -> String {
         let end = event.startDate.addingTimeInterval(Double(event.durationMinutes * 60))
@@ -182,15 +250,21 @@ struct PlannerCalendarView: View {
             if event.ownTaskID != nil {
                 Toggle("Complete \(event.title)", isOn: Binding(get: { StudyBlockTracking.read(event.notes).completedAt != nil }, set: { done in do { try planning.setCompleted(done, external: event); refreshSynced() } catch { app.error = error.localizedDescription } })).labelsHidden().toggleStyle(.checkbox).disabled(!event.writable || event.recurring)
             } else { Image(systemName: "calendar").foregroundStyle(Color.pilot).frame(width: 16) }
+            timeBadge(event.start, allDay: event.allDay)
             VStack(alignment: .leading, spacing: 5) {
-                Text(event.title).font(.system(size: 13, weight: .medium)).strikethrough(StudyBlockTracking.read(event.notes).completedAt != nil || planning.isTaskFinished(event.id))
-                Text("\(event.allDay ? "All day" : event.start.formatted(date: .abbreviated, time: .shortened) + " – " + event.end.formatted(date: .omitted, time: .shortened)) · \(planning.calendars.first { $0.id == event.calendarID }?.title ?? "Synced calendar")").font(.caption).foregroundStyle(.secondary)
+                Text(event.title.replacingOccurrences(of: "Study: ", with: "")).font(.system(size: 13, weight: .semibold)).strikethrough(StudyBlockTracking.read(event.notes).completedAt != nil || planning.isTaskFinished(event.id))
+                Text("\(event.allDay ? "All day" : event.end.formatted(date: .omitted, time: .shortened) + " end") · \(planning.calendars.first { $0.id == event.calendarID }?.title ?? "Synced calendar")").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
             if let id = event.ownTaskID { FinishStudyTaskButton(taskID: id, title: event.title) }
             else if planning.settings.deadlineCalendarIDs.contains(event.calendarID) { FinishStudyTaskButton(taskID: event.id, title: event.title) }
             Menu { Button("Ask AI about this event") { app.ask("Help me with the calendar event \(event.title) on \(event.start.formatted(date: .abbreviated, time: .shortened)).") } } label: { Image(systemName: "ellipsis") }.menuStyle(.borderlessButton).frame(width: 24).accessibilityLabel("Options for \(event.title)")
-        }.padding(.vertical, 8)
+        }.padding(12).background((event.ownTaskID != nil ? Color.pilot : Color(nsColor: .secondaryLabelColor)).opacity(0.045), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+    }
+    private func timeBadge(_ date: Date, allDay: Bool) -> some View {
+        Text(allDay ? "ALL DAY" : date.formatted(date: .omitted, time: .shortened))
+            .font(.system(size: allDay ? 8 : 10, weight: .semibold, design: .rounded)).monospacedDigit().foregroundStyle(Color.pilot)
+            .frame(width: 58).padding(.vertical, 6).background(Color.pilot.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
     }
     private func matches(_ title: String, subjectID: UUID? = nil) -> Bool { search.isEmpty || "\(title) \(subject(subjectID)?.name ?? "")".localizedStandardContains(search) }
     private func taskVisible(_ task: Assignment) -> Bool { (!hideCompleted || !task.isDone) && matches(task.title, subjectID: task.subjectID) }
@@ -212,7 +286,8 @@ struct PlannerCalendarView: View {
     private func dayCell(_ day: Date) -> some View {
         let tasks = assignments.filter { taskVisible($0) && calendar.isDate($0.dueDate, inSameDayAs: day) }
         let dayEvents = events.filter { localVisible($0) && calendar.isDate($0.startDate, inSameDayAs: day) }
-        return CalendarDayCell(day: day, tasks: tasks, events: dayEvents, subjects: subjects, selected: calendar.isDate(day, inSameDayAs: selected), isWeek: mode == "Week", isCurrentMonth: calendar.isDate(day, equalTo: selected, toGranularity: .month))
+        let external = synced.filter { externalVisible($0) && SchoolAgenda.occurs(start: $0.start, end: $0.end, on: day) }
+        return CalendarDayCell(day: day, tasks: tasks, events: dayEvents, synced: external, subjects: subjects, selected: calendar.isDate(day, inSameDayAs: selected), isWeek: mode == "Week", isCurrentMonth: calendar.isDate(day, equalTo: selected, toGranularity: .month))
             .onTapGesture { selected = day }.accessibilityAction { selected = day }
             .dropDestination(for: String.self) { items, _ in
                 guard let value = items.first else { return false }
@@ -233,11 +308,13 @@ struct CalendarDayCell: View {
     let day: Date
     let tasks: [Assignment]
     let events: [PlannerEvent]
+    let synced: [CalendarPlanningEvent]
     let subjects: [Subject]
     let selected: Bool
     let isWeek: Bool
     let isCurrentMonth: Bool
-    private var extra: Int { tasks.count + events.count - min(tasks.count, 2) - min(events.count, 1) }
+    private var visibleLimit: Int { isWeek ? 4 : 3 }
+    private var total: Int { tasks.count + events.count + synced.count }
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
@@ -245,16 +322,22 @@ struct CalendarDayCell: View {
                 Spacer()
                 if Calendar.current.isDateInToday(day) { Circle().fill(Color.pilot).frame(width: 5, height: 5) }
             }.padding(.bottom, 4)
-            ForEach(tasks.prefix(isWeek ? 8 : 2)) { task in taskLabel(task) }
-            ForEach(events.prefix(isWeek ? 8 : 1)) { event in
-                Label(event.title, systemImage: event.kind == "Exam" ? "graduationcap" : "clock")
+            ForEach(tasks.prefix(visibleLimit)) { task in taskLabel(task) }
+            ForEach(events.prefix(max(0, visibleLimit - min(tasks.count, visibleLimit)))) { event in
+                Label(event.title.replacingOccurrences(of: "Study: ", with: ""), systemImage: event.kind == "Exam" ? "graduationcap" : "clock")
                     .font(.system(size: 10)).lineLimit(1).padding(3)
                     .foregroundStyle(subjects.first { $0.id == event.subjectID }?.color ?? Color.pilot)
                     .draggable("event:\(event.id.uuidString)")
             }
-            if !isWeek && extra > 0 { Text("+\(extra) more").font(.system(size: 9)).foregroundStyle(.secondary) }
+            let used = min(tasks.count, visibleLimit) + min(events.count, max(0, visibleLimit - min(tasks.count, visibleLimit)))
+            ForEach(synced.prefix(max(0, visibleLimit - used))) { event in
+                Label(event.title.replacingOccurrences(of: "Study: ", with: ""), systemImage: event.ownTaskID == nil ? "calendar" : "timer")
+                    .font(.system(size: 10)).lineLimit(1).padding(3)
+                    .foregroundStyle(event.ownTaskID == nil ? Color(nsColor: .secondaryLabelColor) : Color.pilot)
+            }
+            if total > visibleLimit { Text("+\(total - visibleLimit) more").font(.system(size: 9, weight: .medium)).foregroundStyle(Color.pilot) }
             Spacer(minLength: 0)
-        }.padding(9).frame(maxWidth: .infinity, minHeight: isWeek ? 240 : 105, alignment: .topLeading)
+        }.padding(9).frame(maxWidth: .infinity, minHeight: isWeek ? 165 : 105, alignment: .topLeading)
             .background(selected ? Color.pilot.opacity(0.07) : Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10).stroke(selected ? Color.pilot.opacity(0.65) : Color.clear, lineWidth: 1))
             .opacity(!isWeek && !isCurrentMonth ? 0.45 : 1)

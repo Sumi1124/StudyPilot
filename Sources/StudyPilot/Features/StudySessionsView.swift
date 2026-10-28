@@ -66,7 +66,7 @@ struct FinishStudyTaskButton: View {
     let taskID: String
     let title: String
     var body: some View {
-        Button("Finish task") { app.finishTask(id: taskID, title: title, context: context) }
+        Button("Finish assignment") { app.finishTask(id: taskID, title: title, context: context) }
             .disabled(planning.isTaskFinished(taskID))
             .help("Finish the whole assignment and clear every linked study session. Undo is available for 90 seconds.")
             .accessibilityLabel("Finish task linked to \(title) and clear its study sessions")

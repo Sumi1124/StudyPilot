@@ -29,3 +29,7 @@ Version 1.16.0 adds optional AI planning help inside Plan my study. Apple Intell
 ## Adaptive interface system (1.17.0)
 
 Version 1.17.0 introduces one adaptive StudyPilot visual language across light and dark appearances. It adds a responsive Today hero, stronger information hierarchy, richer but restrained surfaces, unified brand color, clearer progress and workload visuals, upgraded notebook tiles, a more legible sidebar primary action, and a polished three-step planner. Wide windows now use a centered workspace composition instead of stretching controls into empty space.
+
+## Clearer school calendar (1.18.0)
+
+Version 1.18.0 reorganizes Calendar around the questions students need answered: what is due, when to study, what else is happening, and what to check off next. The header now has direct planning and event actions, simpler List/Week/Month switching, search and active-item filtering, a clear legend, and more understandable connection status. Week and Month cells show compact previews with overflow counts instead of trying to display every item. Selecting a day opens grouped sections for deadlines, study blocks, and other calendar events, with completion controls and readable time badges. Month synchronization now covers every visible day rather than only the selected date.
