@@ -80,7 +80,7 @@ public enum BackupCodec {
             if let reminder = item.reminderDate { try date(reminder); try require(reminder < item.dueDate, "An assignment reminder must precede its deadline.") }
             if let completed = item.completedAt { try date(completed) }
             try require(TaskStatus(rawValue: item.status) != nil && (0...2).contains(item.priority), "An assignment status or priority is invalid.")
-            try require((5...1440).contains(item.estimatedMinutes), "Assignment estimates must be 5–1,440 minutes.")
+            try require((5...100_000).contains(item.estimatedMinutes), "Assignment estimates must be at least 5 minutes.")
             try require(Set(item.criteria).isSubset(of: Set(Criterion.allCases.map(\.rawValue))) && Set(item.criteria).count == item.criteria.count, "Assessment criteria must be unique values A, B, C, or D.")
             try unique(item.checklist, "subtasks"); try require(item.checklist.count <= 1000, "An assignment has too many subtasks.")
             for step in item.checklist { try title(step.title) }

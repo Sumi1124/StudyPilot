@@ -37,6 +37,8 @@
 
 StudyPilot combines the work students usually split across a task manager, calendar, notebook, flashcard app, and timer. Both editions are native desktop apps, store their workspace locally, and do not require an account for their core features. The mature macOS edition has the complete feature set; the new Windows edition begins with assignments, study planning, notes, focus, and backups.
 
+New on macOS in **1.15.0**: a guided first-study loop takes you from one real deadline to a calendar-aware plan and directly into a focus session. New users can start with an optional sample workspace, while existing workspaces stay untouched. Time estimates now accept long projects and keep the full value visible while editing.
+
 <table>
   <tr>
     <td width="50%" valign="top">
@@ -96,7 +98,7 @@ The Windows build is self-contained, so it does not require a separate .NET inst
 
 | Area | What it does |
 | --- | --- |
-| **Today** | Due and overdue counts, study-time progress, notebook shortcuts, agenda, quick capture, and seven-day workload. |
+| **Today** | A guided deadline → plan → focus journey, due and overdue counts, study-time progress, notebook shortcuts, agenda, quick capture, and seven-day workload. |
 | **Assignments** | Subjects, projects, deadlines, reminders, priorities, manual checklists, completion, bulk actions, and reviewed time estimates. |
 | **Calendar** | Local planner events plus selected calendars synced through macOS Calendar. |
 | **Plan my study** | Deadline-first scheduling around busy time, study routines, daily limits, breaks, preview, and explicit save. |

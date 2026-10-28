@@ -35,8 +35,13 @@ struct QuickTaskEntry: View {
             if let saved { Text(saved).font(.caption).foregroundStyle(.secondary) }
         }
     }
-    private var invalid: Bool { title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || title.count > 500 }
-    private var effort: some View { Picker("Effort", selection: $minutes) { ForEach([15,30,60,90,120], id: \.self) { Text("\($0) min").tag($0) } } }
+    private var invalid: Bool { title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || title.count > 500 || !(5...100_000).contains(minutes) }
+    private var effort: some View {
+        HStack(spacing: 6) {
+            TextField("Minutes", value: $minutes, format: .number).textFieldStyle(.roundedBorder).frame(width: 82).monospacedDigit()
+            Text("min").foregroundStyle(.secondary)
+        }
+    }
     @ViewBuilder private var fields: some View {
         DatePicker("Due", selection: $due).fixedSize()
         SubjectPicker(subjects: subjects, selection: $subjectID).frame(maxWidth: 210)

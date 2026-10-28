@@ -8,6 +8,7 @@ struct StudyPlanningView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Environment(AppState.self) private var app
+    @Environment(FocusController.self) private var focus
     @LiveQuery(sort: \Assignment.dueDate) private var assignments: [Assignment]
     @Environment(CalendarPlanningService.self) private var service
     @LiveQuery(sort: \Subject.name) private var subjects: [Subject]
@@ -36,7 +37,7 @@ struct StudyPlanningView: View {
         return nil
     }
     private var estimateIssue: String? {
-        selectedTasks.contains { !(5...2400).contains($0.minutes) } ? "Enter between 5 and 2,400 remaining minutes for each selected assignment." : nil
+        selectedTasks.contains { !(5...100_000).contains($0.minutes) } ? "Enter at least 5 remaining minutes for each selected assignment." : nil
     }
     private var busy: Bool { service.working }
 
@@ -196,7 +197,7 @@ struct StudyPlanningView: View {
             if task.selected {
                 HStack(spacing: 12) {
                     Text("Time left").font(.callout)
-                    TextField("Minutes", value: binding.minutes, format: .number).textFieldStyle(.roundedBorder).frame(width: 75).accessibilityLabel("Remaining minutes for \(task.title)")
+                    TextField("Minutes", value: binding.minutes, format: .number).textFieldStyle(.roundedBorder).frame(width: 110).monospacedDigit().accessibilityLabel("Remaining minutes for \(task.title)")
                     Text("min").font(.callout).foregroundStyle(.secondary)
                     TimeEstimateButton(input: estimateInput(task), minutes: binding.minutes).font(.caption)
                     Spacer()
@@ -331,6 +332,12 @@ struct StudyPlanningView: View {
             Text("Tick off each session in Calendar when you finish it.").font(.callout)
             HStack {
                 Button("View calendar") { let date = savedFirstDate ?? Date(); app.openCalendar(date); dismiss() }.buttonStyle(.borderedProminent)
+                Button("Start a 25-minute focus", systemImage: "timer") {
+                    let subject = selectedTasks.compactMap { task in assignments.first { "local:\($0.id.uuidString)" == task.id }?.subjectID }.first
+                    dismiss()
+                    if focus.state == nil { focus.start(minutes: 25, subjectID: subject) }
+                    app.section = .focus
+                }
                 Button("Plan more") { savedMessage = nil; step = 0; rebuildTasks() }
             }
         }.frame(maxWidth: .infinity, alignment: .leading).pilotCard()
@@ -428,11 +435,11 @@ struct StudyPlanningView: View {
                 let task = previewAssignments.first { "local:\($0.id.uuidString)" == block.taskID }
                 context.insert(PlannerEvent(PlannerEventRecord(id: block.id, title: "Study: \(block.title)", subjectID: task?.subjectID, startDate: block.start, durationMinutes: block.minutes, details: block.notes)))
             }
-            try context.save(); savedFirstDate = value.blocks.first?.start; plan = nil; savedMessage = "Saved \(value.blocks.count) sessions in StudyPilot."
+            try context.save(); UserDefaults.standard.set(true, forKey: "hasCreatedStudyPlan"); savedFirstDate = value.blocks.first?.start; plan = nil; savedMessage = "Saved \(value.blocks.count) sessions in StudyPilot."
         } catch { if inserted { context.rollback() }; service.error = error.localizedDescription }
     }
     private func publish(_ value: StudyPlan) {
-        do { try validate(value); try service.publish(value, tasks: tasks); savedFirstDate = value.blocks.first?.start; plan = nil; savedMessage = service.status ?? "Your sessions were added to the selected calendar." }
+        do { try validate(value); try service.publish(value, tasks: tasks); UserDefaults.standard.set(true, forKey: "hasCreatedStudyPlan"); savedFirstDate = value.blocks.first?.start; plan = nil; savedMessage = service.status ?? "Your sessions were added to the selected calendar." }
         catch { service.error = error.localizedDescription }
     }
 }

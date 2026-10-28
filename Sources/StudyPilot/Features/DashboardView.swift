@@ -8,10 +8,13 @@ struct DashboardView: View {
     @Environment(FocusController.self) private var focus
     @LiveQuery(sort: \Assignment.dueDate) private var assignments: [Assignment]
     @LiveQuery private var sessions: [StudySession]
+    @LiveQuery(sort: \PlannerEvent.startDate) private var plannerEvents: [PlannerEvent]
     @LiveQuery private var cards: [Flashcard]
     @LiveQuery(sort: \Notebook.title) private var notebooks: [Notebook]
     @LiveQuery(sort: \Note.updatedAt, order: .reverse) private var notes: [Note]
     @AppStorage("dailyStudyGoalMinutes") private var goalMinutes = 60
+    @AppStorage("hasCreatedStudyPlan") private var hasCreatedStudyPlan = false
+    private var hasPlan: Bool { hasCreatedStudyPlan || !plannerEvents.isEmpty }
     private var dueToday: Int { assignments.filter { !$0.isDone && Calendar.current.isDate($0.dueDate, inSameDayAs: app.now) }.count }
     private var overdue: Int { assignments.filter { !$0.isDone && $0.dueDate < app.now }.count }
     var body: some View {
@@ -26,6 +29,7 @@ struct DashboardView: View {
                         Spacer()
                         Button("Plan my study", systemImage: "calendar.badge.clock") { app.showingStudyPlanner = true }.buttonStyle(.borderedProminent).controlSize(.large)
                     }
+                    if assignments.isEmpty || !hasPlan || sessions.isEmpty { gettingStarted }
                     summary
                     notebookShelf
                     if geometry.size.width >= 920 {
@@ -42,6 +46,49 @@ struct DashboardView: View {
                 }.padding(28).frame(maxWidth: 1220, alignment: .leading).frame(maxWidth: .infinity, alignment: .top)
             }
         }
+    }
+    private var gettingStarted: some View {
+        HStack(spacing: 22) {
+            VStack(alignment: .leading, spacing: 7) {
+                Text("YOUR FIRST STUDY LOOP").font(.system(size: 10, weight: .semibold)).tracking(0.8).foregroundStyle(Color.pilot)
+                Text(nextJourneyTitle).font(.title3.bold())
+                Text(nextJourneyDetail).font(.callout).foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 8) {
+                journeyPill("1", "Deadline", complete: !assignments.isEmpty)
+                Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
+                journeyPill("2", "Plan", complete: hasPlan)
+                Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
+                journeyPill("3", "Focus", complete: !sessions.isEmpty)
+            }
+            Button(nextJourneyAction, systemImage: nextJourneySymbol) { runNextJourneyAction() }.buttonStyle(.borderedProminent).controlSize(.large)
+        }
+        .padding(20)
+        .background(LinearGradient(colors: [Color.pilot.opacity(0.13), Color.notebookInk.opacity(0.06)], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.pilot.opacity(0.16), lineWidth: 0.5))
+    }
+    private var nextJourneyTitle: String {
+        if assignments.isEmpty { return "Add one real deadline" }
+        if !hasPlan { return "Turn it into a study plan" }
+        return "Start your first focus session"
+    }
+    private var nextJourneyDetail: String {
+        if assignments.isEmpty { return "A title, due date, and honest time estimate are enough." }
+        if !hasPlan { return "StudyPilot will work around your selected calendar commitments." }
+        return "Use the plan while it is fresh and record the time you spend."
+    }
+    private var nextJourneyAction: String { assignments.isEmpty ? "Open setup" : !hasPlan ? "Build plan" : "Start focus" }
+    private var nextJourneySymbol: String { assignments.isEmpty ? "wand.and.stars" : !hasPlan ? "calendar.badge.clock" : "timer" }
+    private func runNextJourneyAction() {
+        if assignments.isEmpty { app.showingFirstRunSetup = true }
+        else if !hasPlan { app.showingStudyPlanner = true }
+        else { if focus.state == nil { focus.start(minutes: 25, subjectID: assignments.first(where: { !$0.isDone })?.subjectID) }; app.section = .focus }
+    }
+    private func journeyPill(_ number: String, _ label: String, complete: Bool) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: complete ? "checkmark.circle.fill" : "\(number).circle").foregroundStyle(complete ? Color.pilot : Color.secondary)
+            Text(label).font(.caption.weight(.medium)).foregroundStyle(complete ? .primary : .secondary)
+        }.padding(.horizontal, 9).padding(.vertical, 7).background(Color(nsColor: .controlBackgroundColor).opacity(0.72), in: Capsule())
     }
     private var summary: some View {
         HStack(spacing: 14) {

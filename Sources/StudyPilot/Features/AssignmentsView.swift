@@ -214,7 +214,14 @@ struct AssignmentEditor: View {
                     Picker("Priority", selection: $draft.priority) { Text("Low").tag(0); Text("Normal").tag(1); Text("High").tag(2) }
                     Picker("Status", selection: $draft.status) { ForEach(TaskStatus.allCases, id: \.self) { Text($0.rawValue).tag($0.rawValue) } }
                 }
-                Stepper("Time left: \(draft.estimatedMinutes) min", value: $draft.estimatedMinutes, in: 5...1440, step: 5)
+                HStack {
+                    Text("Time left")
+                    Spacer()
+                    TextField("Minutes", value: $draft.estimatedMinutes, format: .number)
+                        .textFieldStyle(.roundedBorder).frame(width: 110).monospacedDigit()
+                    Text("min").foregroundStyle(.secondary)
+                    Stepper("Adjust estimated minutes", value: $draft.estimatedMinutes, in: 5...100_000, step: 5).labelsHidden()
+                }
                 TimeEstimateButton(input: EffortEstimateInput(id: draft.id.uuidString, title: draft.title, details: draft.details, subject: subjects.first { $0.id == draft.subjectID }?.name ?? "", deadline: draft.dueDate, checklist: draft.checklist, completed: draft.status == TaskStatus.done.rawValue), minutes: $draft.estimatedMinutes)
                 HStack {
                     Text("MYP criteria"); Spacer()
@@ -257,6 +264,7 @@ struct AssignmentEditor: View {
         draft.reminderDate = reminder ? (draft.reminderDate ?? draft.dueDate.addingTimeInterval(-3600)) : nil
         if let date = draft.reminderDate, date >= draft.dueDate || (date <= Date() && date != assignment?.reminderDate) { validation = "Choose a reminder in the future, before the deadline."; return }
         if draft.checklist.contains(where: { $0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { validation = "Give every subtask a title, or remove the empty step."; return }
+        if !(5...100_000).contains(draft.estimatedMinutes) { validation = "Enter at least 5 minutes of work left."; return }
         draft.completedAt = draft.status == TaskStatus.done.rawValue ? (draft.completedAt ?? Date()) : nil
         let timeChanged = assignment.map { $0.estimatedMinutes != draft.estimatedMinutes } ?? false
         if let assignment { assignment.apply(draft) } else { context.insert(Assignment(draft)) }

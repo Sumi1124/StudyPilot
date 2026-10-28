@@ -76,6 +76,7 @@ struct RootView: View {
     @ObservedObject private var updater = AppUpdater.shared
     @State private var visibility: NavigationSplitViewVisibility = .all
     @AppStorage("appearance") private var appearance = "System"
+    @AppStorage("completedFirstRunSetupV1") private var completedFirstRunSetup = false
     private func sidebarRow(_ section: AppSection) -> some View {
         HStack {
             Label { Text(section.rawValue).font(.system(size: 13, weight: app.section == section ? .medium : .regular)) } icon: { Image(systemName: section.symbol).font(.system(size: 14)).foregroundStyle(app.section == section ? Color.notebookInk : .secondary) }
@@ -161,6 +162,21 @@ struct RootView: View {
                 }
             }) { SettingsView() }
             .sheet(isPresented: $app.showingStudyPlanner) { StudyPlanningView() }
+            .sheet(isPresented: $app.showingFirstRunSetup) {
+                FirstRunSetupView { destination in
+                    completedFirstRunSetup = true
+                    app.showingFirstRunSetup = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        switch destination {
+                        case .planner: app.showingStudyPlanner = true
+                        case .focus:
+                            if focus.state == nil { focus.start(minutes: 25, subjectID: nil) }
+                            app.section = .focus
+                        case .dashboard: app.section = .dashboard
+                        }
+                    }
+                }
+            }
             .alert("Something needs attention", isPresented: Binding(get: { app.error != nil }, set: { if !$0 { app.error = nil } })) { Button("OK") { app.error = nil } } message: { Text(app.error ?? "") }
             .onReceive(NotificationCenter.default.publisher(for: .studyPilotQueryFailed)) { notice in app.error = notice.userInfo?["message"] as? String }
             .onReceive(ticks) { _ in
@@ -178,6 +194,7 @@ struct RootView: View {
                 focus.tick(context: context)
                 await ReminderService.shared.reconcile(context: context)
                 do { try BackupService.automatic(context) } catch { app.error = "Automatic backup could not be created: \(error.localizedDescription)" }
+                if !completedFirstRunSetup && assignments.isEmpty { app.showingFirstRunSetup = true }
             }
             .onChange(of: scenePhase) { if scenePhase == .active { if !updater.isBusy && !app.showingStudyPlanner { planning.removeFinishedTaskSessions(context: context, force: true); planning.checkUnfinished(context: context, force: true) }; focus.tick(context: context); Task { await ReminderService.shared.reconcile(context: context) } } }
             .onChange(of: focus.error) { if let error = focus.error { app.error = error; focus.error = nil } }

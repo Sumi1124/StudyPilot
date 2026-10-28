@@ -30,6 +30,7 @@ public enum AppSection: String, CaseIterable, Identifiable {
     var showingSettings = false
     var checkForUpdatesAfterSettings = false
     var showingStudyPlanner = false
+    var showingFirstRunSetup = false
     var selectedNoteID: UUID?
     var selectedNotebookID: UUID?
     var selectedAssignmentID: UUID?
@@ -127,8 +128,9 @@ extension Assignment {
 }
 extension View {
     func pilotCard() -> some View {
-        self.padding(18).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(nsColor: .separatorColor).opacity(0.3), lineWidth: 0.5))
+        self.padding(18).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color(nsColor: .separatorColor).opacity(0.24), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.035), radius: 10, y: 3)
     }
 }
 struct PageHeading: View {
@@ -137,6 +139,7 @@ struct PageHeading: View {
     let subtitle: String
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
+            if !eyebrow.isEmpty { Text(eyebrow.uppercased()).font(.system(size: 10, weight: .semibold)).tracking(0.8).foregroundStyle(Color.pilot) }
             Text(title).font(.system(size: 28, weight: .semibold))
             if !subtitle.isEmpty { Text(subtitle).font(.callout).foregroundStyle(.secondary) }
         }.frame(maxWidth: .infinity, alignment: .leading)
@@ -148,7 +151,7 @@ struct EmptyState: View {
     let message: String
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: symbol).font(.system(size: 32, weight: .light)).foregroundStyle(Color.pilot)
+            Image(systemName: symbol).font(.system(size: 27, weight: .medium)).foregroundStyle(Color.pilot).frame(width: 58, height: 58).background(Color.pilot.opacity(0.10), in: Circle())
             Text(title).font(.headline)
             Text(message).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 360)
         }.frame(maxWidth: .infinity).padding(40)

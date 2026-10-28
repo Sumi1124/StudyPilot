@@ -25,6 +25,10 @@ struct SettingsView: View {
                 Section("Your workspace") {
                     TextField("Preferred name", text: $displayName)
                     Picker("Appearance", selection: $appearance) { ForEach(["System", "Light", "Dark"], id: \.self) { Text($0) } }
+                    Button("Run setup guide again", systemImage: "wand.and.stars") {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { app.showingFirstRunSetup = true }
+                    }
                     Text("No account. No subscriptions. Your work stays on this Mac.").font(.caption).foregroundStyle(.secondary)
                 }
                 Section("App updates") {
