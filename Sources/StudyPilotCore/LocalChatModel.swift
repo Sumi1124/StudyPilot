@@ -43,16 +43,19 @@ public enum OllamaWire {
             "format": schema, "options": ["temperature": 0.1, "num_ctx": 8192, "num_predict": 900]
         ])
     }
-    public static func reply(from data: Data, eventIDs: [String]?) throws -> CalendarChatResponse {
+    public static func content(from data: Data) throws -> String {
         struct Message: Decodable { let role: String; let content: String }
         struct Envelope: Decodable { let model: String; let message: Message; let done: Bool; let done_reason: String? }
-        struct Fields: Decodable { let eventID: String; let start: String; let reply: String }
         guard data.count <= 128_000 else { throw PlanningError.invalid("The local model returned too much data. Try a shorter request.") }
         let envelope = try JSONDecoder().decode(Envelope.self, from: data)
         guard envelope.model == model, envelope.done, envelope.message.role == "assistant", envelope.done_reason != "length" else {
             throw PlanningError.invalid("The selected local model did not finish its reply. Retry with a shorter message.")
         }
-        let fields = try JSONDecoder().decode(Fields.self, from: Data(envelope.message.content.utf8))
+        return envelope.message.content
+    }
+    public static func reply(from data: Data, eventIDs: [String]?) throws -> CalendarChatResponse {
+        struct Fields: Decodable { let eventID: String; let start: String; let reply: String }
+        let fields = try JSONDecoder().decode(Fields.self, from: Data(content(from: data).utf8))
         var response: [String: Any] = ["reply": fields.reply, "move": NSNull()]
         if fields.eventID != "none" {
             guard let eventIDs, eventIDs.contains(fields.eventID), !fields.start.isEmpty else {
@@ -96,6 +99,13 @@ public actor OllamaClient {
     }
     public func reply(prompt: String, eventIDs: [String]?) async throws -> CalendarChatResponse {
         let body = try OllamaWire.requestBody(prompt: prompt, eventIDs: eventIDs)
+        return try OllamaWire.reply(from: await chatData(body: body), eventIDs: eventIDs)
+    }
+    public func estimate(input: EffortEstimateInput) async throws -> EffortEstimate {
+        let data = try await chatData(body: EffortEstimation.ollamaBody(input: input))
+        return try EffortEstimate.decode(OllamaWire.content(from: data))
+    }
+    private func chatData(body: Data) async throws -> Data {
         let (bytes, response) = try await session.bytes(for: request("api/chat", body: body, timeout: 180))
         try validate(response)
         var data = Data()
@@ -105,7 +115,7 @@ public actor OllamaClient {
             data.append(byte)
         }
         try Task.checkCancellation()
-        return try OllamaWire.reply(from: data, eventIDs: eventIDs)
+        return data
     }
     public func download(progress: @escaping @Sendable (OllamaWire.Progress) async -> Void) async throws {
         let body = try JSONSerialization.data(withJSONObject: ["model": OllamaWire.model, "stream": true])

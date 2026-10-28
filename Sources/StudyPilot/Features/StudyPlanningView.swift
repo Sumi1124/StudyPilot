@@ -10,6 +10,7 @@ struct StudyPlanningView: View {
     @Environment(AppState.self) private var app
     @LiveQuery(sort: \Assignment.dueDate) private var assignments: [Assignment]
     @Environment(CalendarPlanningService.self) private var service
+    @LiveQuery(sort: \Subject.name) private var subjects: [Subject]
     @State private var tasks: [PlanningTask] = []
     @State private var plan: StudyPlan?
     @State private var previewAssignments: [AssignmentRecord] = []
@@ -197,12 +198,18 @@ struct StudyPlanningView: View {
                     Text("Time left").font(.callout)
                     TextField("Minutes", value: binding.minutes, format: .number).textFieldStyle(.roundedBorder).frame(width: 75).accessibilityLabel("Remaining minutes for \(task.title)")
                     Text("min").font(.callout).foregroundStyle(.secondary)
+                    TimeEstimateButton(input: estimateInput(task), minutes: binding.minutes).font(.caption)
                     Spacer()
                     Picker("Priority", selection: binding.priority) { Text("Low").tag(0); Text("Normal").tag(1); Text("High").tag(2) }.frame(width: 160)
                 }.padding(.leading, 22)
 
             }
         }.padding(14).background(task.selected ? Color.pilot.opacity(0.055) : Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 12))
+    }
+    private func estimateInput(_ task: PlanningTask) -> EffortEstimateInput {
+        let assignment = assignments.first { "local:\($0.id.uuidString)" == task.id }
+        let subject = subjects.first { $0.id == assignment?.subjectID }?.name ?? ""
+        return EffortEstimateInput(id: task.id, title: task.title, details: task.details, subject: subject, deadline: task.deadline, checklist: assignment?.checklist ?? [], completed: assignment?.isDone ?? false)
     }
     private var timeStep: some View {
         @Bindable var service = service

@@ -185,6 +185,7 @@ struct AssignmentEditor: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Environment(AppState.self) private var app
+    @Environment(CalendarPlanningService.self) private var planning
     @LiveQuery(sort: \Subject.name) private var subjects: [Subject]
     @LiveQuery(sort: \Project.title) private var projects: [Project]
     let assignment: Assignment?
@@ -213,7 +214,8 @@ struct AssignmentEditor: View {
                     Picker("Priority", selection: $draft.priority) { Text("Low").tag(0); Text("Normal").tag(1); Text("High").tag(2) }
                     Picker("Status", selection: $draft.status) { ForEach(TaskStatus.allCases, id: \.self) { Text($0.rawValue).tag($0.rawValue) } }
                 }
-                Stepper("Estimated time: \(draft.estimatedMinutes) min", value: $draft.estimatedMinutes, in: 5...1440, step: 5)
+                Stepper("Time left: \(draft.estimatedMinutes) min", value: $draft.estimatedMinutes, in: 5...1440, step: 5)
+                TimeEstimateButton(input: EffortEstimateInput(id: draft.id.uuidString, title: draft.title, details: draft.details, subject: subjects.first { $0.id == draft.subjectID }?.name ?? "", deadline: draft.dueDate, checklist: draft.checklist, completed: draft.status == TaskStatus.done.rawValue), minutes: $draft.estimatedMinutes)
                 HStack {
                     Text("MYP criteria"); Spacer()
                     ForEach(Criterion.allCases) { criterion in
@@ -256,7 +258,16 @@ struct AssignmentEditor: View {
         if let date = draft.reminderDate, date >= draft.dueDate || (date <= Date() && date != assignment?.reminderDate) { validation = "Choose a reminder in the future, before the deadline."; return }
         if draft.checklist.contains(where: { $0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { validation = "Give every subtask a title, or remove the empty step."; return }
         draft.completedAt = draft.status == TaskStatus.done.rawValue ? (draft.completedAt ?? Date()) : nil
+        let timeChanged = assignment.map { $0.estimatedMinutes != draft.estimatedMinutes } ?? false
         if let assignment { assignment.apply(draft) } else { context.insert(Assignment(draft)) }
-        if app.save(context, completionChanges: [draft]) { dismiss() }
+        if app.save(context, completionChanges: [draft]) {
+            let key = "local:\(draft.id.uuidString)"
+            if timeChanged, var saved = planning.settings.taskOverrides[key] {
+                saved.minutes = draft.estimatedMinutes; planning.settings.taskOverrides[key] = saved
+                do { try planning.saveSettings() }
+                catch { app.error = "Assignment saved, but its planner time could not be saved: " + error.localizedDescription }
+            }
+            dismiss()
+        }
     }
 }
