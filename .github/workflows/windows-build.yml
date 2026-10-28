@@ -9,7 +9,7 @@ on:
       - ".github/workflows/windows-build.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-windows:
@@ -42,3 +42,24 @@ jobs:
           name: StudyPilot-Windows-x64
           path: artifacts/StudyPilot-Windows-x64.zip
           if-no-files-found: error
+
+      - name: Read Windows version
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content Windows/StudyPilot.Windows/StudyPilot.Windows.csproj
+          "version=$($project.Project.PropertyGroup.Version)" >> $env:GITHUB_OUTPUT
+
+      - name: Publish separate Windows download
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WINDOWS_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $tag = "windows-v$env:WINDOWS_VERSION"
+          $asset = "artifacts/StudyPilot-Windows-x64.zip"
+          if (gh release view $tag 2>$null) {
+            gh release upload $tag $asset --clobber
+          } else {
+            gh release create $tag $asset --target $env:GITHUB_SHA --prerelease --title "StudyPilot for Windows $env:WINDOWS_VERSION" --notes "Native Windows edition with assignments, automatic study planning and rescheduling, notes, focus sessions, and local backups. This release is separate from the macOS release line."
+          }

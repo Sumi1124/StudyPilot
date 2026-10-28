@@ -5,12 +5,15 @@
 <h1 align="center">StudyPilot</h1>
 
 <p align="center">
-  A private, native study workspace for assignments, calendars, notes, source-based notebooks, revision, and focus.
+  A private, native student workspace for macOS and Windows.
 </p>
 
 <p align="center">
   <a href="https://github.com/Sumi1124/StudyPilot/releases/latest/download/StudyPilot-macOS.zip">
     <img alt="Download StudyPilot for macOS" src="https://img.shields.io/badge/Download_for_macOS-315F53?style=for-the-badge&logo=apple&logoColor=white">
+  </a>
+  <a href="https://github.com/Sumi1124/StudyPilot/releases/download/windows-v1.0.0/StudyPilot-Windows-x64.zip">
+    <img alt="Download StudyPilot for Windows" src="https://img.shields.io/badge/Download_for_Windows-476B99?style=for-the-badge&logo=windows11&logoColor=white">
   </a>
   <a href="https://github.com/Sumi1124/StudyPilot/releases/latest">
     <img alt="Latest release" src="https://img.shields.io/github/v/release/Sumi1124/StudyPilot?style=for-the-badge&label=Latest&color=6877E8">
@@ -19,6 +22,7 @@
 
 <p align="center">
   <img alt="macOS 14 or later" src="https://img.shields.io/badge/macOS-14%2B-1D2522?style=flat-square">
+  <img alt="Windows 10 or 11" src="https://img.shields.io/badge/Windows-10%2F11-1D2522?style=flat-square&logo=windows11&logoColor=white">
   <img alt="Apple Silicon" src="https://img.shields.io/badge/Apple_Silicon-arm64-1D2522?style=flat-square">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?style=flat-square&logo=swift&logoColor=white">
   <img alt="108 tests passing" src="https://img.shields.io/badge/tests-108_passing-3D8068?style=flat-square">
@@ -31,7 +35,7 @@
 
 ## One place for the whole school week
 
-StudyPilot combines the work students usually split across a task manager, calendar, notebook, flashcard app, and timer. It is a real SwiftUI macOS app, stores its workspace locally, and does not require an account or paid API for its core features.
+StudyPilot combines the work students usually split across a task manager, calendar, notebook, flashcard app, and timer. Both editions are native desktop apps, store their workspace locally, and do not require an account for their core features. The mature macOS edition has the complete feature set; the new Windows edition begins with assignments, study planning, notes, focus, and backups.
 
 <table>
   <tr>
@@ -58,13 +62,18 @@ StudyPilot combines the work students usually split across a task manager, calen
 
 ## Download
 
-<p>
+<p align="left">
   <a href="https://github.com/Sumi1124/StudyPilot/releases/latest/download/StudyPilot-macOS.zip">
-    <img alt="Download the latest StudyPilot macOS build" src="https://img.shields.io/badge/Download_the_latest_macOS_build-315F53?style=for-the-badge&logo=apple&logoColor=white">
+    <img alt="Download the latest StudyPilot macOS build" src="https://img.shields.io/badge/macOS-Download_latest-315F53?style=for-the-badge&logo=apple&logoColor=white">
+  </a>
+  <a href="https://github.com/Sumi1124/StudyPilot/releases/download/windows-v1.0.0/StudyPilot-Windows-x64.zip">
+    <img alt="Download StudyPilot for Windows" src="https://img.shields.io/badge/Windows-Download_1.0.0-476B99?style=for-the-badge&logo=windows11&logoColor=white">
   </a>
 </p>
 
-StudyPilot currently supports **Apple Silicon Macs running macOS 14 or later**.
+### macOS
+
+Supports **Apple Silicon Macs running macOS 14 or later**.
 
 1. Download and unzip `StudyPilot-macOS.zip`.
 2. Move `StudyPilot.app` to Applications if you want.
@@ -73,7 +82,17 @@ StudyPilot currently supports **Apple Silicon Macs running macOS 14 or later**.
 
 The public build is ad-hoc signed for development and is not Apple-notarized. The source and exact validation record are available in this repository so the build can be inspected or reproduced. See the [latest release](https://github.com/Sumi1124/StudyPilot/releases/latest) for the current version and archive.
 
-## What is included
+### Windows
+
+Supports **64-bit Windows 10 and Windows 11**.
+
+1. Download and unzip `StudyPilot-Windows-x64.zip`.
+2. Open `StudyPilot.exe`.
+3. Your workspace is stored locally under `%LOCALAPPDATA%\StudyPilot`.
+
+The Windows build is self-contained, so it does not require a separate .NET installation. It is not yet code-signed; Windows SmartScreen may show a warning on first launch. Windows has its own `1.x` release line and does not change the macOS version.
+
+## What is included on macOS
 
 | Area | What it does |
 | --- | --- |
@@ -85,6 +104,17 @@ The public build is ad-hoc signed for development and is not Apple-notarized. Th
 | **Notes & revision** | Markdown, tags, wiki-style note links, backlinks, decks, review history, and spaced repetition. |
 | **Focus & progress** | Recoverable timers, daily goals, study history, criterion scores, trends, and personal targets. |
 | **AI Chat** | Local study help, saved-workspace facts, optional calendar context, and reviewed calendar move proposals. |
+
+## What is included on Windows
+
+| Area | What it does |
+| --- | --- |
+| **Today** | Due-soon work, upcoming study blocks, completion totals, and focus progress. |
+| **Assignments** | Subjects, deadlines, priorities, completion, and estimated study time. |
+| **Study plan** | Splits estimates into focused sessions and reschedules missed unchecked blocks. |
+| **Notes** | Keeps personal class and revision notes locally on the PC. |
+| **Focus** | A 25-minute focus timer connected to the current assignment list. |
+| **Data** | Local JSON persistence, migration from the preview, and backup import/export. |
 
 ## Local-first AI
 
@@ -128,6 +158,16 @@ StudyPilot reads only the calendars you select. It writes after you review a pla
 
 The build script produces an optimized Apple Silicon app at `dist/StudyPilot.app`. The test script supports both full Xcode and standalone Command Line Tools.
 
+### Windows
+
+Install the .NET 8 SDK on Windows, then run:
+
+```powershell
+.\Windows\build.ps1
+```
+
+The self-contained executable is written to `Windows\dist\win-x64\StudyPilot.exe`. See [Windows/README.md](Windows/README.md) for Windows-specific details.
+
 ## Useful shortcuts
 
 | Shortcut | Action |
@@ -169,7 +209,9 @@ The app does not include an analytics SDK and does not upload its workspace data
 | [PROGRESS.md](PROGRESS.md) | Implementation status by feature |
 
 <p align="center">
-  <a href="https://github.com/Sumi1124/StudyPilot/releases/latest/download/StudyPilot-macOS.zip"><strong>Download StudyPilot</strong></a>
+  <a href="https://github.com/Sumi1124/StudyPilot/releases/latest/download/StudyPilot-macOS.zip"><strong>Download for macOS</strong></a>
+  ·
+  <a href="https://github.com/Sumi1124/StudyPilot/releases/download/windows-v1.0.0/StudyPilot-Windows-x64.zip"><strong>Download for Windows</strong></a>
   ·
   <a href="https://github.com/Sumi1124/StudyPilot/releases/latest">Release notes</a>
   ·
