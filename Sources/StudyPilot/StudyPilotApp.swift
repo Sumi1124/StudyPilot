@@ -92,11 +92,16 @@ struct RootView: View {
         NavigationSplitView(columnVisibility: $visibility) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 10) {
-                    Image(systemName: "book.closed.fill").font(.system(size: 16, weight: .medium)).foregroundStyle(Color.notebookInk).frame(width: 34, height: 36).background(Color.notebookInk.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
-                    VStack(alignment: .leading, spacing: 3) { Text("StudyPilot").font(.system(size: 15, weight: .semibold)); Text("Your study workspace").font(.system(size: 10)).foregroundStyle(.secondary) }
-                }.padding(.horizontal, 18).padding(.top, 20).padding(.bottom, 16)
+                    Image(systemName: "book.closed.fill").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white).frame(width: 40, height: 40)
+                        .background(LinearGradient(colors: [Color.pilot, Color.pilotBlue], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .shadow(color: Color.pilot.opacity(0.24), radius: 10, y: 4)
+                    VStack(alignment: .leading, spacing: 3) { Text("StudyPilot").font(.system(size: 16, weight: .semibold, design: .rounded)); Text("Your study workspace").font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary) }
+                }.padding(.horizontal, 18).padding(.top, 20).padding(.bottom, 18)
                 Button { app.showingSearch = true } label: {
-                    HStack { Image(systemName: "magnifyingglass"); Text("Search anything"); Spacer(); Text("⌘K").font(.system(size: 10, design: .monospaced)) }.font(.system(size: 12)).foregroundStyle(.secondary).padding(10).background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 8))
+                    HStack { Image(systemName: "magnifyingglass"); Text("Search anything"); Spacer(); Text("⌘K").font(.system(size: 10, weight: .medium, design: .monospaced)).padding(.horizontal, 6).padding(.vertical, 3).background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 5)) }
+                        .font(.system(size: 12)).foregroundStyle(.secondary).padding(11)
+                        .background(Color(nsColor: .controlBackgroundColor).opacity(0.78), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(Color.primary.opacity(0.06), lineWidth: 0.5))
                 }.buttonStyle(.plain).padding(.horizontal, 14).padding(.bottom, 8)
                 List(selection: $app.section) {
                     Section("Workspace") { ForEach([AppSection.dashboard, .assignments, .calendar]) { sidebarRow($0) } }
@@ -110,12 +115,17 @@ struct RootView: View {
                     }
                     Section("Study") { ForEach([AppSection.notes, .revision, .focus, .chat]) { sidebarRow($0) } }
                     Section("Organize") { ForEach([AppSection.progress, .library]) { sidebarRow($0) } }
-                }.listStyle(.sidebar).environment(\.defaultMinListRowHeight, 30)
-                Button { app.showingStudyPlanner = true } label: { HStack { Image(systemName: "calendar.badge.clock").foregroundStyle(Color.notebookInk); Text("Plan my study").font(.system(size: 12, weight: .medium)); Spacer(); Image(systemName: "arrow.up.right").font(.caption2).foregroundStyle(.secondary) }.padding(12).background(Color.notebookInk.opacity(0.07), in: RoundedRectangle(cornerRadius: 10)) }.buttonStyle(.plain).padding(12)
+                }.listStyle(.sidebar).environment(\.defaultMinListRowHeight, 32).scrollContentBackground(.hidden)
+                Button { app.showingStudyPlanner = true } label: {
+                    HStack { Image(systemName: "calendar.badge.clock"); Text("Plan my study").font(.system(size: 12, weight: .semibold)); Spacer(); Image(systemName: "arrow.up.right").font(.caption2).opacity(0.8) }
+                        .foregroundStyle(.white).padding(13)
+                        .background(LinearGradient(colors: [Color.pilot, Color.pilotBlue.opacity(0.92)], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .shadow(color: Color.pilot.opacity(0.18), radius: 10, y: 4)
+                }.buttonStyle(.plain).padding(12)
                 Divider().padding(.horizontal, 12)
                 Button { app.showingSettings = true } label: { Label("Settings & backups", systemImage: "gearshape").font(.system(size: 12)) }
                     .buttonStyle(.plain).foregroundStyle(.secondary).padding(.horizontal, 18).padding(.vertical, 15)
-            }.navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 280)
+            }.background(Color.pilot.opacity(0.025)).navigationSplitViewColumnWidth(min: 210, ideal: 238, max: 290)
         } detail: {
             Group {
                 switch app.section {
@@ -130,7 +140,7 @@ struct RootView: View {
                 case .chat: StudyChatView()
                 case .notebooks: NotebooksView()
                 }
-            }.frame(maxWidth: .infinity, maxHeight: .infinity).background(Color(nsColor: .windowBackgroundColor))
+            }.frame(maxWidth: .infinity, maxHeight: .infinity).background { PilotBackdrop() }
                 .toolbar {
                     ToolbarItemGroup(placement: .primaryAction) {
                         AppearanceControl()

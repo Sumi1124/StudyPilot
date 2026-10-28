@@ -25,3 +25,7 @@ Version 1.15.0 adds a short first-run setup for entering a deadline, choosing ca
 ## AI schedule coach (1.16.0)
 
 Version 1.16.0 adds optional AI planning help inside Plan my study. Apple Intelligence or the optional local Qwen model can recommend session length, daily load, and planning horizon from selected deadlines, remaining minutes, subjects, and anonymized free-time totals. The recommendation is review-only until the student presses Use these settings; StudyPilot's deterministic planner still places sessions, checks conflicts, and requires an explicit save. Calendar event names are not included in the coaching request, and the coach is instructed not to solve assignments or generate schoolwork.
+
+## Adaptive interface system (1.17.0)
+
+Version 1.17.0 introduces one adaptive StudyPilot visual language across light and dark appearances. It adds a responsive Today hero, stronger information hierarchy, richer but restrained surfaces, unified brand color, clearer progress and workload visuals, upgraded notebook tiles, a more legible sidebar primary action, and a polished three-step planner. Wide windows now use a centered workspace composition instead of stretching controls into empty space.

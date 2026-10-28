@@ -60,7 +60,7 @@ struct StudyPlanningView: View {
                             default: reviewStep
                             }
                         }
-                    }.padding(.horizontal, 28).padding(.bottom, 24)
+                    }.padding(.horizontal, 30).padding(.bottom, 28).frame(maxWidth: 980)
                 }
                 .onChange(of: step) {
                     if step != 1 && planCoach.running { planCoach.cancel() }
@@ -71,7 +71,7 @@ struct StudyPlanningView: View {
             Divider()
             footer
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background { PilotBackdrop() }
         .frame(minWidth: 780, idealWidth: 920, maxWidth: 1040, minHeight: 600, idealHeight: 760)
         .task {
             guard !configured else { return }; configured = true
@@ -108,18 +108,19 @@ struct StudyPlanningView: View {
                     Button { step = index; service.error = nil } label: {
                         HStack(spacing: 8) {
                             Image(systemName: step > index ? "checkmark.circle.fill" : "\(index + 1).circle.fill")
-                            Text(stepNames[index]).font(.system(size: 12, weight: step == index ? .semibold : .regular))
+                            Text(stepNames[index]).font(.system(size: 12, weight: step == index ? .semibold : .medium))
                             Spacer(minLength: 0)
-                        }.padding(8).frame(maxWidth: .infinity)
+                        }.padding(.horizontal, 11).padding(.vertical, 10).frame(maxWidth: .infinity)
                             .foregroundStyle(step == index ? Color.pilot : Color.secondary)
-                            .background(step == index ? Color.pilot.opacity(0.12) : Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 5))
+                            .background(step == index ? Color.pilot.opacity(0.13) : Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(step == index ? Color.pilot.opacity(0.18) : Color.clear, lineWidth: 0.5))
                     }.buttonStyle(.plain).disabled(busy || savedMessage != nil)
                         .accessibilityLabel("Step \(index + 1): \(stepNames[index])")
                         .accessibilityAddTraits(step == index ? .isSelected : [])
                         .accessibilityRemoveTraits(step == index ? [] : .isSelected)
                 }
             }
-        }.padding(22)
+        }.padding(22).background(.bar)
     }
     private var assignmentStep: some View {
         VStack(alignment: .leading, spacing: 18) {

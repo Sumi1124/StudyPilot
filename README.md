@@ -37,7 +37,7 @@
 
 StudyPilot combines the work students usually split across a task manager, calendar, notebook, flashcard app, and timer. Both editions are native desktop apps, store their workspace locally, and do not require an account for their core features. The mature macOS edition has the complete feature set; the new Windows edition begins with assignments, study planning, notes, focus, and backups.
 
-New on macOS in **1.16.0**: the optional AI schedule coach reviews selected deadlines, remaining minutes, subjects, and anonymized free-time totals, then proposes session length, daily load, and planning horizon. You review and apply those settings before the deterministic planner creates any sessions. The guided first-study loop introduced in 1.15 remains available from Settings.
+New on macOS in **1.17.0**: a cohesive adaptive design system gives the sidebar, dashboard, planner, cards, charts, and primary actions a clearer hierarchy in both light and dark appearances. The optional AI schedule coach from 1.16 remains available inside Plan my study and still requires review before applying any recommendation.
 
 <table>
   <tr>

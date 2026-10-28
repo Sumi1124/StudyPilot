@@ -119,7 +119,27 @@ extension Color {
         let value = UInt64(hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted), radix: 16) ?? 0x6877E8
         self.init(red: Double((value >> 16) & 255) / 255, green: Double((value >> 8) & 255) / 255, blue: Double(value & 255) / 255)
     }
-    static var pilot: Color { Color(nsColor: .controlAccentColor) }
+    static var pilot: Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(red: 0.43, green: 0.77, blue: 0.66, alpha: 1)
+                : NSColor(red: 0.12, green: 0.40, blue: 0.34, alpha: 1)
+        })
+    }
+    static var pilotCanvas: Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(red: 0.055, green: 0.065, blue: 0.063, alpha: 1)
+                : NSColor(red: 0.965, green: 0.975, blue: 0.970, alpha: 1)
+        })
+    }
+    static var pilotBlue: Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(red: 0.47, green: 0.66, blue: 0.86, alpha: 1)
+                : NSColor(red: 0.24, green: 0.43, blue: 0.66, alpha: 1)
+        })
+    }
 }
 extension Subject { var color: Color { Color(hex: colorHex) } }
 extension Assignment {
@@ -128,9 +148,19 @@ extension Assignment {
 }
 extension View {
     func pilotCard() -> some View {
-        self.padding(18).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color(nsColor: .separatorColor).opacity(0.24), lineWidth: 0.5))
-            .shadow(color: .black.opacity(0.035), radius: 10, y: 3)
+        self.padding(18)
+            .background(Color(nsColor: .controlBackgroundColor).opacity(0.96), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.white.opacity(0.18), lineWidth: 0.5))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color(nsColor: .separatorColor).opacity(0.20), lineWidth: 0.5))
+            .shadow(color: Color.pilot.opacity(0.045), radius: 18, y: 7)
+    }
+}
+struct PilotBackdrop: View {
+    var body: some View {
+        ZStack {
+            Color.pilotCanvas
+            LinearGradient(colors: [Color.pilot.opacity(0.055), Color.clear, Color.pilotBlue.opacity(0.035)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        }.ignoresSafeArea()
     }
 }
 struct PageHeading: View {
@@ -140,8 +170,8 @@ struct PageHeading: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             if !eyebrow.isEmpty { Text(eyebrow.uppercased()).font(.system(size: 10, weight: .semibold)).tracking(0.8).foregroundStyle(Color.pilot) }
-            Text(title).font(.system(size: 28, weight: .semibold))
-            if !subtitle.isEmpty { Text(subtitle).font(.callout).foregroundStyle(.secondary) }
+            Text(title).font(.system(size: 30, weight: .semibold, design: .rounded))
+            if !subtitle.isEmpty { Text(subtitle).font(.callout).foregroundStyle(.secondary).padding(.top, 1) }
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 }
