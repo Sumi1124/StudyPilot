@@ -17,6 +17,7 @@ struct CommandPalette: View {
     @LiveQuery(sort: \Subject.name) private var subjects: [Subject]
     @LiveQuery(sort: \Project.title) private var projects: [Project]
     @LiveQuery(sort: \Deck.title) private var decks: [Deck]
+    @LiveQuery(sort: \Notebook.title) private var notebooks: [Notebook]
     @State private var query = ""
     @State private var highlighted = 0
     @FocusState private var searchFocused: Bool
@@ -35,6 +36,9 @@ struct CommandPalette: View {
         }
         for item in notes.filter({ "\($0.title) \($0.body) \($0.tags.joined(separator: " "))".localizedCaseInsensitiveContains(query) }).prefix(10) {
             result.append(SearchResult(id: "note-\(item.id)", title: item.title, detail: "Note", symbol: "note.text") { app.selectedNoteID = item.id; app.section = .notes })
+        }
+        for item in notebooks.filter({ $0.title.localizedCaseInsensitiveContains(query) }).prefix(10) {
+            result.append(SearchResult(id: "notebook-\(item.id)", title: item.title, detail: "Notebook · sources & notes", symbol: "books.vertical") { app.selectedNotebookID = item.id; app.section = .notebooks })
         }
         for item in subjects.filter({ $0.name.localizedCaseInsensitiveContains(query) }).prefix(10) {
             result.append(SearchResult(id: "subject-\(item.id)", title: item.name, detail: "Subject progress", symbol: item.symbol) { app.selectedSubjectID = item.id; app.section = .progress })

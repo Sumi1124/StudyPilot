@@ -4,7 +4,7 @@ import StudyPilotCore
 import StudyPilotData
 
 public enum AppSection: String, CaseIterable, Identifiable {
-    case dashboard = "Today", assignments = "Assignments", calendar = "Calendar", notes = "Notes", revision = "Revision", focus = "Focus", progress = "Progress", library = "Subjects & projects", chat = "AI Chat"
+    case dashboard = "Today", assignments = "Assignments", calendar = "Calendar", notes = "Notes", revision = "Revision", focus = "Focus", progress = "Progress", library = "Subjects & projects", chat = "AI Chat", notebooks = "Notebooks"
     public var id: String { rawValue }
     var symbol: String {
         switch self {
@@ -17,6 +17,7 @@ public enum AppSection: String, CaseIterable, Identifiable {
         case .progress: "chart.xyaxis.line"
         case .library: "books.vertical"
         case .chat: "bubble.left.and.bubble.right"
+        case .notebooks: "books.vertical"
         }
     }
 }
@@ -30,6 +31,7 @@ public enum AppSection: String, CaseIterable, Identifiable {
     var checkForUpdatesAfterSettings = false
     var showingStudyPlanner = false
     var selectedNoteID: UUID?
+    var selectedNotebookID: UUID?
     var selectedAssignmentID: UUID?
     var selectedDeckID: UUID?
     var selectedSubjectID: UUID?
@@ -125,8 +127,8 @@ extension Assignment {
 }
 extension View {
     func pilotCard() -> some View {
-        self.padding(18).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(nsColor: .separatorColor).opacity(0.35), lineWidth: 0.5))
+        self.padding(18).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(nsColor: .separatorColor).opacity(0.3), lineWidth: 0.5))
     }
 }
 struct PageHeading: View {
@@ -135,7 +137,7 @@ struct PageHeading: View {
     let subtitle: String
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(title).font(.system(size: 24, weight: .semibold))
+            Text(title).font(.system(size: 28, weight: .semibold))
             if !subtitle.isEmpty { Text(subtitle).font(.callout).foregroundStyle(.secondary) }
         }.frame(maxWidth: .infinity, alignment: .leading)
     }

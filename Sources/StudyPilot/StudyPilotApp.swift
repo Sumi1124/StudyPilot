@@ -51,7 +51,11 @@ import StudyPilotData
                     Button("Focus Session") { app.section = .focus; if focus.state == nil { focus.start(minutes: 25, subjectID: nil) } }.keyboardShortcut("f", modifiers: [.command, .shift]).disabled(updater.isBusy)
                     Divider()
                     ForEach(Array(AppSection.allCases.enumerated()), id: \.element.id) { index, section in
-                        Button(section.rawValue) { app.section = section }.keyboardShortcut(KeyEquivalent(Character(String(index + 1)))).disabled(updater.isBusy)
+                        if index < 9 {
+                            Button(section.rawValue) { app.section = section }.keyboardShortcut(KeyEquivalent(Character(String(index + 1)))).disabled(updater.isBusy)
+                        } else {
+                            Button(section.rawValue) { app.section = section }.disabled(updater.isBusy)
+                        }
                     }
                 }
                 CommandGroup(replacing: .appSettings) { Button("Settings…") { app.showingSettings = true }.keyboardShortcut(",").disabled(updater.isBusy) }
@@ -60,6 +64,8 @@ import StudyPilotData
 }
 
 struct RootView: View {
+    @LiveQuery(sort: \Notebook.title) private var notebooks: [Notebook]
+    @LiveQuery private var assignments: [Assignment]
     @Environment(StudyChatService.self) private var chat
     @Environment(CalendarPlanningService.self) private var planning
     @Environment(\.modelContext) private var context
@@ -71,26 +77,44 @@ struct RootView: View {
     @State private var visibility: NavigationSplitViewVisibility = .all
     @AppStorage("appearance") private var appearance = "System"
     private func sidebarRow(_ section: AppSection) -> some View {
-        Label { Text(section.rawValue).font(.system(size: 13)) } icon: { Image(systemName: section.symbol).font(.system(size: 14)).foregroundStyle(.secondary) }
-            .tag(section).padding(.vertical, 2)
+        HStack {
+            Label { Text(section.rawValue).font(.system(size: 13, weight: app.section == section ? .medium : .regular)) } icon: { Image(systemName: section.symbol).font(.system(size: 14)).foregroundStyle(app.section == section ? Color.notebookInk : .secondary) }
+            Spacer(minLength: 4)
+            if section == .assignments {
+                let count = assignments.filter { !$0.isDone }.count
+                if count > 0 { Text("\(count)").font(.system(size: 10, weight: .medium)).monospacedDigit().foregroundStyle(.secondary).padding(.horizontal, 6).padding(.vertical, 2).background(Color.primary.opacity(0.06), in: Capsule()) }
+            }
+        }.tag(section).padding(.vertical, 2).listRowInsets(EdgeInsets(top: 1, leading: 9, bottom: 1, trailing: 9))
     }
     var body: some View {
         @Bindable var app = app
         NavigationSplitView(columnVisibility: $visibility) {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 8) {
-                    Image(systemName: "paperplane").font(.system(size: 15, weight: .medium)).foregroundStyle(.secondary)
-                    Text("StudyPilot").font(.system(size: 14, weight: .semibold))
-                }.padding(.horizontal, 18).padding(.vertical, 18)
+                HStack(spacing: 10) {
+                    Image(systemName: "book.closed.fill").font(.system(size: 16, weight: .medium)).foregroundStyle(Color.notebookInk).frame(width: 34, height: 36).background(Color.notebookInk.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
+                    VStack(alignment: .leading, spacing: 3) { Text("StudyPilot").font(.system(size: 15, weight: .semibold)); Text("Your study workspace").font(.system(size: 10)).foregroundStyle(.secondary) }
+                }.padding(.horizontal, 18).padding(.top, 20).padding(.bottom, 16)
+                Button { app.showingSearch = true } label: {
+                    HStack { Image(systemName: "magnifyingglass"); Text("Search anything"); Spacer(); Text("⌘K").font(.system(size: 10, design: .monospaced)) }.font(.system(size: 12)).foregroundStyle(.secondary).padding(10).background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 8))
+                }.buttonStyle(.plain).padding(.horizontal, 14).padding(.bottom, 8)
                 List(selection: $app.section) {
-                    Section("Plan") { ForEach([AppSection.dashboard, .assignments, .calendar]) { sidebarRow($0) } }
-                    Section("Study") { ForEach([AppSection.notes, .revision, .focus]) { sidebarRow($0) } }
-                    Section("Workspace") { ForEach([AppSection.progress, .library, .chat]) { sidebarRow($0) } }
-                }.listStyle(.sidebar)
+                    Section("Workspace") { ForEach([AppSection.dashboard, .assignments, .calendar]) { sidebarRow($0) } }
+                    Section("Notebooks") {
+                        Button { app.selectedNotebookID = nil; app.section = .notebooks } label: { Label("All notebooks", systemImage: "books.vertical").font(.system(size: 13)).foregroundStyle(app.section == .notebooks && app.selectedNotebookID == nil ? Color.notebookInk : .primary).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 4).contentShape(Rectangle()) }.buttonStyle(.plain).listRowInsets(EdgeInsets(top: 1, leading: 9, bottom: 1, trailing: 9))
+                        ForEach(notebooks.prefix(5)) { notebook in
+                            Button { app.selectedNotebookID = notebook.id; app.section = .notebooks } label: {
+                                HStack(spacing: 9) { Image(systemName: "book.closed").font(.system(size: 12)).foregroundStyle(Color.notebookInk); Text(notebook.title).font(.system(size: 12)).lineLimit(1); Spacer(minLength: 0) }.padding(.vertical, 4).padding(.horizontal, 7).background(app.section == .notebooks && app.selectedNotebookID == notebook.id ? Color.notebookInk.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 6)).contentShape(Rectangle())
+                            }.buttonStyle(.plain).listRowInsets(EdgeInsets(top: 1, leading: 9, bottom: 1, trailing: 9)).help("Open notebook: \(notebook.title)")
+                        }
+                    }
+                    Section("Study") { ForEach([AppSection.notes, .revision, .focus, .chat]) { sidebarRow($0) } }
+                    Section("Organize") { ForEach([AppSection.progress, .library]) { sidebarRow($0) } }
+                }.listStyle(.sidebar).environment(\.defaultMinListRowHeight, 30)
+                Button { app.showingStudyPlanner = true } label: { HStack { Image(systemName: "calendar.badge.clock").foregroundStyle(Color.notebookInk); Text("Plan my study").font(.system(size: 12, weight: .medium)); Spacer(); Image(systemName: "arrow.up.right").font(.caption2).foregroundStyle(.secondary) }.padding(12).background(Color.notebookInk.opacity(0.07), in: RoundedRectangle(cornerRadius: 10)) }.buttonStyle(.plain).padding(12)
                 Divider().padding(.horizontal, 12)
                 Button { app.showingSettings = true } label: { Label("Settings & backups", systemImage: "gearshape").font(.system(size: 12)) }
                     .buttonStyle(.plain).foregroundStyle(.secondary).padding(.horizontal, 18).padding(.vertical, 15)
-            }.navigationSplitViewColumnWidth(min: 185, ideal: 205, max: 250)
+            }.navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 280)
         } detail: {
             Group {
                 switch app.section {
@@ -103,6 +127,7 @@ struct RootView: View {
                 case .focus: FocusView()
                 case .progress: AcademicProgressView()
                 case .chat: StudyChatView()
+                case .notebooks: NotebooksView()
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity).background(Color(nsColor: .windowBackgroundColor))
                 .toolbar {

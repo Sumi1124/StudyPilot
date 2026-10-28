@@ -4,6 +4,27 @@ import SwiftData
 import StudyPilotCore
 @testable import StudyPilotData
 
+@Test @MainActor func notebookSourceCopiesAndCitedNotesSurvivePortableBackup() throws {
+    let container = try DataStore.makeContainer(inMemory: true), context = container.mainContext
+    let notebook = NotebookRecord(title: "Source notebook")
+    let original = NoteRecord(title: "Class notes", body: "Original class material")
+    let source = NoteRecord(title: original.title, body: original.body, notebookID: notebook.id, tags: [NotebookResearch.sourceTag])
+    let answer = NoteRecord(title: "Saved question", body: "Explanation\n\nOriginal class material", notebookID: notebook.id, tags: [NotebookResearch.answerTag])
+    context.insert(Notebook(notebook)); for record in [original, source, answer] { context.insert(Note(record)) }; try context.save()
+    let portable = try BackupCodec.decode(BackupCodec.encode(BackupStore.snapshot(context)))
+    let restored = try DataStore.makeContainer(inMemory: true)
+    try BackupStore.restore(portable, into: restored.mainContext)
+    let notes = try restored.mainContext.fetch(FetchDescriptor<Note>())
+    #expect(notes.first { $0.id == source.id }?.record == source)
+    #expect(notes.first { $0.id == answer.id }?.record == answer)
+    let originalCopy = try #require(notes.first { $0.id == original.id }); originalCopy.body = "Newer original material"
+    try restored.mainContext.save()
+    #expect(notes.first { $0.id == source.id }?.body == "Original class material")
+    let importedCopy = try #require(notes.first { $0.id == source.id }); restored.mainContext.delete(importedCopy); try restored.mainContext.save()
+    #expect(try restored.mainContext.fetchCount(FetchDescriptor<Note>()) == 2)
+    #expect(try restored.mainContext.fetchCount(FetchDescriptor<Notebook>()) == 1)
+}
+
 @Test @MainActor func plannedWorkSurvivesBackupAndIsNotScheduledTwice() throws {
     let container = try DataStore.makeContainer(inMemory: true)
     let context = ModelContext(container)

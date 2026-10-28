@@ -1,5 +1,16 @@
 # StudyPilot validation
 
+Latest validation: **1.14.0 (25), 28 October 2026**. The original validation below is retained as release history; newer checks are documented in the version sections.
+
+## 1.14.0 — notebooks and workspace UI
+
+- `Scripts/test.sh`: **108 tests passed**, including six new notebook checks. They cover stable exact-text passages, selected-source retrieval, multilingual/CJK search, bounded context, cross-source fallback sampling, unknown/duplicate citation rejection, insufficient-evidence normalization, input/import limits, exact local-model request schema, and source/answer copies surviving portable backup and restoration independently of original notes.
+- `Scripts/build-app.sh`: final optimized ARM64 build passed in 132.25 seconds. Deep/strict signature verification and Info.plist, privacy manifest, and generated Xcode project validation passed. The Xcode project includes the new feature and service files.
+- The actual source-import service was exercised by a standalone local smoke helper: Japanese UTF-8 Markdown and a CoreText-generated text PDF imported correctly; PDF page markers were retained; blank/image-only-style and oversized files were rejected. PDF extraction uses PDFKit, with no OCR or external upload.
+- Native QA used `com.studypilot.notebook-test` with an isolated synthetic data directory. Notebook library, source selection, reading, original citation opening, pasted-text import, native file-picker PDF import, saved-answer counts, and editable flashcard drafts were exercised. A real Apple-model reply about temperature and enzymes matched the selected reading and provided a valid source reference. Changing source selection cleared the old result. Light and dark layouts were visually inspected.
+- Existing notebook and note records are reused; no schema migration, generated assignment steps, automatic downloads, calendar writes, or production-data changes were introduced. Internal source/answer tags remain in backups and are hidden/preserved by the note editor.
+- Source AI uses at most eight 900-byte excerpts, and up to four references must match actual provided excerpts. This verifies reference identity, **not semantic correctness** of the model's explanation. The UI labels that limitation, shows the excerpt scope, and opens original text for checking. Qwen inference remains untested because the optional model is not installed; no weights or runtime updates were downloaded during this change.
+
 Validation completed on 23 October 2026 with the delivered source and optimized release executable.
 
 ## Build environment and results

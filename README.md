@@ -2,7 +2,7 @@
 
 A native, offline student workspace for Apple Silicon Macs running macOS 14 or later. Built with Swift 6, SwiftUI, SwiftData, Charts, and UserNotifications. Core study features work offline without an account or paid API. Optional in-app updates use the Sparkle framework and an internet connection.
 
-**Version 1.3 adds native signed in-app updates through Settings and the StudyPilot menu.** Version 1.2 added note-to-flashcard creation, bulk assignment updates, assignment focus shortcuts, and an adjustable daily study goal. Google Calendar study planning remains available. This optional connection uses Google calendars synced through macOS Calendar. Automatic scheduling works locally; AI time estimates and study steps use Apple Intelligence on supported Macs with macOS 26+. Google synchronization requires your Google account and connectivity.
+**Version 1.14 adds a source-based notebook workspace and a refreshed sidebar and Today page.** Import class readings, ask source questions with references, and keep notes and revision cards together. Google Calendar planning uses calendars synced through macOS Calendar. Scheduling works locally; optional AI uses Apple Intelligence on supported Macs with macOS 26+, or the separately downloaded Qwen 3.5 0.8B model in Ollama. Model downloads are always explicit.
 
 ## Run the application
 
@@ -39,10 +39,11 @@ The test script supports both Xcode and standalone Command Line Tools. On this h
 
 ## Using your workspace
 
-- **Overview:** real task counts, an interactive next-deadline countdown (or an all-caught-up state), overdue and today’s work, upcoming deadlines and exams, weekly planning, study hours, review counts, and study streak.
-- **Assignments:** create and edit tasks; assign subjects/projects; set deadlines, reminders, priorities, statuses, estimates, criteria A–D, and subtasks. On supported Macs, ask Apple Intelligence to suggest editable checklist steps from an assignment title and description. Review each suggestion before saving; existing checklist items and the time estimate are preserved. Search, filter, sort, or mark complete. Right-click to delete with confirmation.
+- **Today:** clickable due/overdue/study-time cards, notebook shortcuts, an agenda, quick capture, workload by deadline, and focus/revision shortcuts.
+- **Assignments:** create and edit tasks; assign subjects/projects; set deadlines, reminders, priorities, statuses, remaining-time estimates, criteria A–D, and manual subtasks. Review an optional AI time estimate before applying it. Search, filter, sort, or mark complete. Right-click to delete with confirmation.
 - **Calendar:** month and week views; select a day to inspect its items. Add examinations or study events. Drag assignment/event chips to another day; times of day and reminder lead times are preserved. The editing sheets also provide an accessible alternative to dragging.
-- **Plan my study:** connect calendars, identify assignment deadlines, set study hours and a daily limit, request optional on-device AI estimates/steps, and generate a conflict-checked preview. Save the blocks locally or add them to a writable Google calendar. See `GOOGLE-CALENDAR.md` for setup and the complete workflow.
+- **Plan my study:** connect calendars, identify assignment deadlines, set study hours and a daily limit, review optional local AI time estimates, and generate a conflict-checked preview. Save blocks locally or add them to a writable Google calendar. See `GOOGLE-CALENDAR.md` for setup and the complete workflow.
+- **Notebooks:** open your existing notebooks from the sidebar or browse a searchable subject-linked library. Add PDF, UTF-8 text/Markdown, pasted text, or a copy of an existing note. Check which sources to use, read extracted text, find relevant passages without AI, or ask a local model for an explanation with clickable source passages. Keep your own notes alongside readings and make editable revision cards. At narrower widths, study tools remain available from the header menu.
 - **Notes:** create notebooks linked to subjects; write Markdown with automatic saving, tags, search, and preview. Use `[[Another note’s title]]` to connect notes. Existing matching notes and backlinks appear beneath the editor. Duplicate titles expose each matching note. Use unique titles for clearer links.
 - **Revision:** create decks and question/answer cards. Review due cards, reveal the answer, and rate recall with Again/Hard/Good/Easy. Every rating saves history and a next review date. Right-click decks/cards for confirmed deletion.
 - **Focus:** 25-minute Pomodoro, 50-minute, and custom 1–240 minute sessions; optional 5-minute breaks; pause/resume and save partial sessions. A timestamp-based timer recovers after relaunch and keeps accurate elapsed time while backgrounded. Breaks do not add study time.
@@ -56,12 +57,20 @@ The test script supports both Xcode and standalone Command Line Tools. On this h
 | ⌘K | Search assignments, note contents/tags, subjects, projects, decks, and actions |
 | ⇧⌘F | Start a 25-minute focus session, or open an active session |
 | ⇧⌘P | Open Google Calendar and study planning |
-| ⌘1–8 | Navigate the eight workspace sections |
+| ⌘1–9 | Navigate Today through AI Chat; Notebooks is also in the Workspace menu |
 | ⌘, | Settings, reminders, and backups |
 | Space | Reveal a flashcard answer |
 | 1–4 | Rate a revealed flashcard |
 
 ## Storage, backups, and recovery
+
+### Notebook sources and local AI
+
+Notebook material uses the existing notebook/note records, so older notes and notebooks remain available and exported backups include imported text and saved answers. No database schema migration is required. Imports create independent text copies; original files/notes are kept, and later changes to originals do not update the copies. PDF page markers are retained where text is extractable. Scanned/image-only PDFs require OCR outside StudyPilot. Imports allow up to 20 MB per file, 300 PDF pages, 200 KB of extracted text per source, and 50 imported sources per notebook. Duplicate title-and-text imports are rejected.
+
+Ask sources uses up to eight 900-byte passages from checked sources. Text matching selects excerpts, with a cross-source sample when no term matches. This is bounded excerpt retrieval, not a full-document semantic index. The UI identifies that scope. Source IDs in a response must match provided excerpts; unsupported IDs and malformed output are rejected. Missing citations produce an insufficient-evidence response instead of an uncited answer. The app displays exact original passages, but an AI explanation can still misinterpret them; inspect its references. Changing the question, sources, or model clears stale results and cancels the request. Answers are saved only when you choose Save answer as a note.
+
+This is a StudyPilot notebook feature inspired by source-based study workspaces. It does not connect to Google's NotebookLM service. Sources are sent only to the selected local model: Apple's on-device Foundation Models, or the fixed Ollama loopback endpoint. There are no cloud-model requests or automatic downloads. Suggested assignment steps remain removed.
 
 The standard local build stores data at:
 

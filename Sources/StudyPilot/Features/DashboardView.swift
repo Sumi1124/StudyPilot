@@ -9,6 +9,8 @@ struct DashboardView: View {
     @LiveQuery(sort: \Assignment.dueDate) private var assignments: [Assignment]
     @LiveQuery private var sessions: [StudySession]
     @LiveQuery private var cards: [Flashcard]
+    @LiveQuery(sort: \Notebook.title) private var notebooks: [Notebook]
+    @LiveQuery(sort: \Note.updatedAt, order: .reverse) private var notes: [Note]
     @AppStorage("dailyStudyGoalMinutes") private var goalMinutes = 60
     private var dueToday: Int { assignments.filter { !$0.isDone && Calendar.current.isDate($0.dueDate, inSameDayAs: app.now) }.count }
     private var overdue: Int { assignments.filter { !$0.isDone && $0.dueDate < app.now }.count }
@@ -16,13 +18,16 @@ struct DashboardView: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text("Today").font(.system(size: 28, weight: .semibold))
-                        Text(app.now, format: .dateTime.weekday(.wide).month(.wide).day()).font(.callout).foregroundStyle(.secondary)
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(app.now, format: .dateTime.weekday(.wide).month(.wide).day()).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                            Text("Today").font(.system(size: 32, weight: .semibold))
+                        }
                         Spacer()
-                        Button("Plan my study") { app.showingStudyPlanner = true }.buttonStyle(.bordered)
+                        Button("Plan my study", systemImage: "calendar.badge.clock") { app.showingStudyPlanner = true }.buttonStyle(.borderedProminent).controlSize(.large)
                     }
                     summary
+                    notebookShelf
                     if geometry.size.width >= 920 {
                         HStack(alignment: .top, spacing: 28) {
                             TodayAgendaView().frame(maxWidth: .infinity, alignment: .topLeading)
@@ -39,23 +44,43 @@ struct DashboardView: View {
         }
     }
     private var summary: some View {
-        HStack(spacing: 24) {
-            summaryButton(value: dueToday, label: "due today", filter: .today)
-            Divider().frame(height: 24)
-            summaryButton(value: overdue, label: "overdue", filter: .overdue)
-            Divider().frame(height: 24)
+        HStack(spacing: 14) {
+            summaryButton(value: dueToday, label: "Due today", filter: .today, symbol: "calendar", tint: .notebookInk)
+            summaryButton(value: overdue, label: "Overdue", filter: .overdue, symbol: "clock.badge.exclamationmark", tint: overdue > 0 ? .orange : .secondary)
             let minutes = DailyStudyProgress(sessions: sessions.map(\.record), goalMinutes: goalMinutes, now: app.now).minutes
-            HStack(alignment: .firstTextBaseline, spacing: 6) { Text("\(minutes)").font(.system(size: 22, weight: .medium)).monospacedDigit(); Text("minutes studied").font(.caption).foregroundStyle(.secondary) }
-            Spacer()
-        }.padding(.vertical, 14).overlay(alignment: .top) { Divider() }.overlay(alignment: .bottom) { Divider() }
+            Button { app.section = .focus } label: {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack { Label("Study time", systemImage: "timer").font(.caption.weight(.medium)).foregroundStyle(.secondary); Spacer(); Image(systemName: "arrow.up.right").font(.caption2).foregroundStyle(.tertiary) }
+                    HStack(alignment: .firstTextBaseline, spacing: 5) { Text("\(minutes)").font(.system(size: 30, weight: .medium)).monospacedDigit(); Text("/ \(goalMinutes) min").font(.caption).foregroundStyle(.secondary) }
+                }.frame(maxWidth: .infinity, alignment: .leading).pilotCard().contentShape(Rectangle())
+            }.buttonStyle(.plain)
+        }
     }
-    private func summaryButton(value: Int, label: String, filter: AssignmentTimeFilter) -> some View {
+    private func summaryButton(value: Int, label: String, filter: AssignmentTimeFilter, symbol: String, tint: Color) -> some View {
         Button { app.assignmentTimeFilter = filter; app.section = .assignments } label: {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("\(value)").font(.system(size: 22, weight: .medium)).monospacedDigit().foregroundStyle(filter == .overdue && value > 0 ? Color.orange : .primary)
-                Text(label).font(.caption).foregroundStyle(.secondary)
-            }
+            VStack(alignment: .leading, spacing: 14) {
+                HStack { Label(label, systemImage: symbol).font(.caption.weight(.medium)).foregroundStyle(.secondary); Spacer(); Image(systemName: "arrow.up.right").font(.caption2).foregroundStyle(.tertiary) }
+                Text("\(value)").font(.system(size: 30, weight: .medium)).monospacedDigit().foregroundStyle(tint)
+            }.frame(maxWidth: .infinity, alignment: .leading).pilotCard().contentShape(Rectangle())
         }.buttonStyle(.plain).help("View assignments \(label)")
+    }
+    private var notebookShelf: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack { Text("Study materials").font(.system(size: 14, weight: .semibold)); Spacer(); Button("All notebooks") { app.selectedNotebookID = nil; app.section = .notebooks }.buttonStyle(.link).font(.caption) }
+            if notebooks.isEmpty {
+                Button { app.selectedNotebookID = nil; app.section = .notebooks } label: {
+                    HStack(spacing: 14) { Image(systemName: "books.vertical").font(.title2).foregroundStyle(Color.notebookInk); VStack(alignment: .leading, spacing: 4) { Text("Bring your reading together").font(.callout.weight(.medium)); Text("Create a notebook for sources, class notes, and revision.").font(.caption).foregroundStyle(.secondary) }; Spacer(); Image(systemName: "arrow.right").foregroundStyle(.secondary) }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(Color.notebookInk.opacity(0.06), in: RoundedRectangle(cornerRadius: 12)).contentShape(Rectangle())
+                }.buttonStyle(.plain)
+            } else {
+                HStack(spacing: 12) {
+                    ForEach(notebooks.prefix(3)) { notebook in
+                        Button { app.selectedNotebookID = notebook.id; app.section = .notebooks } label: {
+                            HStack(spacing: 12) { Image(systemName: "book.closed").font(.title3).foregroundStyle(Color.notebookInk); VStack(alignment: .leading, spacing: 5) { Text(notebook.title).font(.callout.weight(.medium)).lineLimit(1); Text("\(notes.filter { $0.notebookID == notebook.id }.count) items").font(.caption).foregroundStyle(.secondary) }; Spacer(minLength: 0) }.padding(15).frame(maxWidth: .infinity, alignment: .leading).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10)).contentShape(Rectangle())
+                        }.buttonStyle(.plain)
+                    }
+                }
+            }
+        }
     }
     private var utilities: some View {
         VStack(alignment: .leading, spacing: 24) {

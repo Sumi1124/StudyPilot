@@ -48,7 +48,7 @@ struct NotesView: View {
                             HStack {
                                 Text(note.updatedAt, format: .dateTime.month(.abbreviated).day())
                                 Spacer()
-                                if let tag = note.tags.first { Text("#" + tag) }
+                                if let tag = note.tags.first(where: { !$0.hasPrefix("studypilot:") }) { Text("#" + tag) }
                             }.font(.system(size: 10)).foregroundStyle(.tertiary)
                         }.padding(.vertical, 8).tag(note.id)
                             .contextMenu { Button("Delete note…", role: .destructive) { deleting = note } }
@@ -162,13 +162,14 @@ struct NoteEditor: View {
                 guard copiedMarkdown else { return }
                 do { try await Task.sleep(for: .seconds(2)); copiedMarkdown = false } catch { }
             }
-            .onAppear { tags = note.tags.joined(separator: ", ") }
+            .onAppear { tags = note.tags.filter { !$0.hasPrefix("studypilot:") }.joined(separator: ", ") }
             .onChange(of: note.title) { scheduleSave() }
             .onChange(of: note.body) { scheduleSave() }
             .onChange(of: note.notebookID) { scheduleSave() }
             .onChange(of: note.subjectID) { scheduleSave() }
             .onChange(of: tags) {
-                let parsed = Array(Set(tags.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })).sorted()
+                let reserved = note.tags.filter { $0.hasPrefix("studypilot:") }
+                let parsed = Array(Set(reserved + tags.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty && !$0.hasPrefix("studypilot:") })).sorted()
                 if parsed != note.tags { note.tags = parsed; scheduleSave() }
             }
             .onDisappear { saveTask?.cancel(); if !note.isDeleted { saveNow() } }

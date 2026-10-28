@@ -58,11 +58,17 @@ The application does not upload the workspace database or use an analytics SDK. 
 
 `StudyPlanner` allocates work by deadline, then priority, within user-selected weekdays/hours, a daily cap, session lengths, and breaks. Work rounds up to five minutes. Intervals use absolute dates and injected Calendar arithmetic across daylight-saving changes. Existing future StudyPilot blocks count toward a task's remaining work and daily budget. Past sessions do not imply task completion. Work that cannot fit produces an explicit unscheduled item. Allocation is deterministic for the same inputs; new block UUIDs are storage identifiers.
 
-On macOS 26+, `StudyPlanningAI` uses Apple's Foundation Models only when the system model reports availability. It returns an estimated duration and concrete study steps. The response is bounded and decoded as JSON; invalid responses leave the previous estimate untouched. AI does not choose event times or perform writes. Unsupported SDKs/operating systems retain automatic scheduling with user estimates.
+Optional local AI produces reviewed remaining-time ranges through `TimeEstimateGeneration`. It uses the selected Apple or Qwen model; invalid responses leave existing fields untouched. Suggested assignment steps were removed in 1.9.1. AI does not choose event times or perform writes. Unsupported/unavailable models retain automatic scheduling with manually entered estimates.
 
 The preview is invalidated by input changes. Before saving, the app checks the current local database and refetches calendar events. Calendar changes require a new preview. Calendar writes are staged with `commit: false` and committed together; an error resets the store and requires refresh. New events have a StudyPilot URL and encoded source-task identity in their notes so subsequent plans recognize already allocated work. Existing events, teacher deadlines, and recurring series are never changed by this workflow. Local saves use existing PlannerEvent records, so the database schema remains unchanged.
 
 Planning preferences and reviewed task inputs are stored in an atomic sidecar JSON file beside the store, with calendar descriptions omitted. They are not portable workspace backup data. Google authentication and synchronization remain managed by macOS. A live account is required to verify provider sync and real write permissions.
+
+## Notebook research
+
+`NotebooksView` presents the existing Notebook records as a library and source workspace. Imported extracted text is stored in independent Note records marked `studypilot:source`; saved AI answers use `studypilot:answer`. This keeps portable backup compatibility without altering SwiftData schema. Hidden internal tags are preserved when users edit ordinary note tags. File imports extract PDF text with page markers or read UTF-8 Markdown/plain text in a detached task. Transaction contexts disable autosave and commit each copy once, validating source size, per-notebook capacity, and exact duplicates before insertion.
+
+`NotebookResearch` splits material into stable non-overlapping excerpts, matches query terms (including CJK bigrams), and bounds model context to eight excerpts. When nothing matches it samples across sources. `NotebookResearchController` owns cancellable request identity, selected-model dispatch, and validated response decoding. Source/question/model changes invalidate results. IDs must refer to supplied excerpts; citations display the original stored excerpt text. Identity validation does not prove a synthesized explanation is entailed by a source. Saving an answer explicitly stores its question, model label, and quoted passage snapshots in a normal notebook note.
 
 ## Apple framework references
 
