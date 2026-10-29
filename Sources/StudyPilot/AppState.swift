@@ -120,25 +120,17 @@ extension Color {
         self.init(red: Double((value >> 16) & 255) / 255, green: Double((value >> 8) & 255) / 255, blue: Double(value & 255) / 255)
     }
     static var pilot: Color {
-        Color(nsColor: NSColor(name: nil) { appearance in
-            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-                ? NSColor(red: 0.43, green: 0.77, blue: 0.66, alpha: 1)
-                : NSColor(red: 0.12, green: 0.40, blue: 0.34, alpha: 1)
-        })
+        AppAccent.selectedColor
     }
     static var pilotCanvas: Color {
         Color(nsColor: NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-                ? NSColor(red: 0.055, green: 0.065, blue: 0.063, alpha: 1)
-                : NSColor(red: 0.965, green: 0.975, blue: 0.970, alpha: 1)
+                ? NSColor(red: 0.060, green: 0.066, blue: 0.073, alpha: 1)
+                : NSColor(red: 0.965, green: 0.969, blue: 0.973, alpha: 1)
         })
     }
     static var pilotBlue: Color {
-        Color(nsColor: NSColor(name: nil) { appearance in
-            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-                ? NSColor(red: 0.47, green: 0.66, blue: 0.86, alpha: 1)
-                : NSColor(red: 0.24, green: 0.43, blue: 0.66, alpha: 1)
-        })
+        AppAccent.selectedSecondaryColor
     }
 }
 extension Subject { var color: Color { Color(hex: colorHex) } }

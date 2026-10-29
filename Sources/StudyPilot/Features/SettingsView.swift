@@ -25,7 +25,6 @@ struct SettingsView: View {
             Form {
                 Section("Your workspace") {
                     TextField("Preferred name", text: $displayName)
-                    Picker("Appearance", selection: $appearance) { ForEach(["System", "Light", "Dark"], id: \.self) { Text($0) } }
                     Picker("School programme", selection: $ibProgramme) {
                         Text("General").tag("General")
                         Text("IB MYP").tag("MYP")
@@ -37,6 +36,19 @@ struct SettingsView: View {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { app.showingFirstRunSetup = true }
                     }
                     Text("No account. No subscriptions. Your work stays on this Mac.").font(.caption).foregroundStyle(.secondary)
+                }
+                Section("Appearance") {
+                    Picker("Mode", selection: $appearance) {
+                        Text("Follow Mac").tag("System")
+                        Text("Light").tag("Light")
+                        Text("Dark").tag("Dark")
+                    }
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text("Accent color").font(.callout.weight(.medium))
+                        AccentPicker()
+                    }
+                    Text("Your color applies to navigation, buttons, charts, and highlights. Changes appear immediately.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 Section("App updates") {
                     LabeledContent("Installed version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development")

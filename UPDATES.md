@@ -1,5 +1,9 @@
 # In-app updates
 
+## Accent colors (1.22.0)
+
+Settings → Appearance now offers six accent colors and a macOS color wheel for a custom choice, with a quicker menu in the toolbar. The selected color persists across launches and is shared by primary controls and highlights in Light and Dark mode. Custom colors are adjusted for readable contrast on each appearance.
+
 ## Today screen and agenda (1.21.0)
 
 Today uses a compact header and one status strip, with the schedule visible before notebooks and extras. Study blocks tied to the same task are grouped by day; expand one group to see and complete individual sessions. The sidebar and cards use flatter, quieter surfaces.

@@ -53,7 +53,7 @@ struct FirstRunSetupView: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
                 HStack(spacing: 11) {
-                    Image(systemName: "book.closed.fill").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
+                    Image(systemName: "book.closed.fill").font(.system(size: 17, weight: .semibold)).foregroundStyle(Color(nsColor: .windowBackgroundColor))
                         .frame(width: 40, height: 40).background(Color.pilot.gradient, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Set up StudyPilot").font(.title2.bold())
@@ -218,7 +218,7 @@ struct FirstRunSetupView: View {
 
     private func journeyRow(_ number: Int, _ title: String, _ detail: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            Text("\(number)").font(.caption.bold()).foregroundStyle(.white).frame(width: 24, height: 24).background(Color.pilot, in: Circle())
+            Text("\(number)").font(.caption.bold()).foregroundStyle(Color(nsColor: .windowBackgroundColor)).frame(width: 24, height: 24).background(Color.pilot, in: Circle())
             VStack(alignment: .leading, spacing: 3) { Text(title).font(.headline); Text(detail).font(.caption).foregroundStyle(.secondary) }
         }
     }

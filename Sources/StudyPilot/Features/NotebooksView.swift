@@ -453,8 +453,5 @@ private struct ExistingNotebookSource: View {
 }
 
 extension Color {
-    static var notebookInk: Color { Color(light: NSColor(red: 0.18, green: 0.32, blue: 0.29, alpha: 1), dark: NSColor(red: 0.60, green: 0.79, blue: 0.71, alpha: 1)) }
-    private init(light: NSColor, dark: NSColor) {
-        self.init(nsColor: NSColor(name: nil) { appearance in appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light })
-    }
+    static var notebookInk: Color { .pilot }
 }

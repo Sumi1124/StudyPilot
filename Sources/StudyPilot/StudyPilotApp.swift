@@ -29,7 +29,7 @@ import StudyPilotData
     var body: some Scene {
         Window("StudyPilot", id: "main") {
             if let container {
-                RootView().environment(app).environment(focus).environment(planning).environment(chat).modelContainer(container).tint(.pilot)
+                RootView().environment(app).environment(focus).environment(planning).environment(chat).modelContainer(container)
             } else {
                 VStack(spacing: 18) {
                     Image(systemName: "externaldrive.badge.exclamationmark").font(.largeTitle)
@@ -76,6 +76,8 @@ struct RootView: View {
     @ObservedObject private var updater = AppUpdater.shared
     @State private var visibility: NavigationSplitViewVisibility = .all
     @AppStorage("appearance") private var appearance = "System"
+    @AppStorage("accentColor") private var accentColor = AppAccent.forest.rawValue
+    @AppStorage("customAccentHex") private var customAccentHex = "355F9C"
     @AppStorage("completedFirstRunSetupV1") private var completedFirstRunSetup = false
     private func sidebarRow(_ section: AppSection) -> some View {
         HStack {
@@ -117,7 +119,7 @@ struct RootView: View {
                 }.listStyle(.sidebar).environment(\.defaultMinListRowHeight, 30).scrollContentBackground(.hidden)
                 Button { app.showingStudyPlanner = true } label: {
                     HStack { Image(systemName: "calendar.badge.clock"); Text("Plan my study").font(.system(size: 12, weight: .semibold)); Spacer(); Image(systemName: "arrow.up.right").font(.caption2).opacity(0.75) }
-                        .foregroundStyle(.white).padding(11)
+                        .foregroundStyle(Color(nsColor: .windowBackgroundColor)).padding(11)
                         .background(Color.pilot, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                 }.buttonStyle(.plain).padding(12)
                 Divider().padding(.horizontal, 12)
@@ -207,5 +209,6 @@ struct RootView: View {
             .onChange(of: scenePhase) { if scenePhase == .active { if !updater.isBusy && !app.showingStudyPlanner { planning.removeFinishedTaskSessions(context: context, force: true); planning.checkUnfinished(context: context, force: true) }; focus.tick(context: context); Task { await ReminderService.shared.reconcile(context: context) } } }
             .onChange(of: focus.error) { if let error = focus.error { app.error = error; focus.error = nil } }
             .preferredColorScheme(appearance == "Light" ? .light : appearance == "Dark" ? .dark : nil)
+            .tint(AppAccent.color(name: accentColor, customHex: customAccentHex))
     }
 }
