@@ -39,6 +39,8 @@ StudyPilot combines the work students usually split across a task manager, calen
 
 New on macOS in **1.20.0**: download the optional Qwen 3.5 0.8B model inside StudyPilot, even when the local service is stopped or Ollama is missing. StudyPilot fetches a checksum-verified engine into its own Application Support folder when needed and continues the model download without opening a website. IB MYP and DP workspace modes remain available in Settings.
 
+New in **1.21.0**: a calmer Today screen places the agenda above secondary materials, reduces empty status cards, and groups repeated study blocks under their assignment. Open a group to check off each session or finish the linked task.
+
 <table>
   <tr>
     <td width="50%" valign="top">

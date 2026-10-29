@@ -9,7 +9,6 @@ struct DashboardView: View {
     @LiveQuery(sort: \Assignment.dueDate) private var assignments: [Assignment]
     @LiveQuery private var sessions: [StudySession]
     @LiveQuery(sort: \PlannerEvent.startDate) private var plannerEvents: [PlannerEvent]
-    @LiveQuery private var cards: [Flashcard]
     @LiveQuery(sort: \Notebook.title) private var notebooks: [Notebook]
     @LiveQuery(sort: \Note.updatedAt, order: .reverse) private var notes: [Note]
     @AppStorage("dailyStudyGoalMinutes") private var goalMinutes = 60
@@ -20,50 +19,45 @@ struct DashboardView: View {
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 18) {
                     hero
                     if assignments.isEmpty || !hasPlan || sessions.isEmpty { gettingStarted }
                     summary
-                    notebookShelf
-                    if geometry.size.width >= 920 {
-                        HStack(alignment: .top, spacing: 28) {
+                    if geometry.size.width >= 850 {
+                        HStack(alignment: .top, spacing: 18) {
                             TodayAgendaView().frame(maxWidth: .infinity, alignment: .topLeading).pilotCard()
-                            utilities.frame(width: 310).pilotCard()
+                            QuickTaskEntry(compact: true).frame(width: 278).pilotCard()
+                        }
+                        HStack(alignment: .top, spacing: 18) {
+                            WorkloadWeekView(assignments: assignments.map(\.record), now: app.now)
+                                .frame(maxWidth: .infinity, alignment: .topLeading).pilotCard()
+                            notebookShelf.frame(maxWidth: .infinity, alignment: .topLeading)
                         }
                     } else {
                         TodayAgendaView().pilotCard()
-                        utilities.pilotCard()
+                        QuickTaskEntry(compact: true).pilotCard()
+                        WorkloadWeekView(assignments: assignments.map(\.record), now: app.now).pilotCard()
+                        notebookShelf
                     }
-                }.padding(30).frame(maxWidth: 1280, alignment: .leading).frame(maxWidth: .infinity, alignment: .top)
+                }.padding(.horizontal, 26).padding(.vertical, 22).frame(maxWidth: 1220, alignment: .leading).frame(maxWidth: .infinity, alignment: .top)
             }
         }
     }
     private var hero: some View {
-        HStack(alignment: .center, spacing: 24) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(app.now, format: .dateTime.weekday(.wide).month(.wide).day()).font(.system(size: 11, weight: .semibold)).tracking(0.6).textCase(.uppercase).foregroundStyle(Color.pilot)
-                Text("Today").font(.system(size: 36, weight: .semibold, design: .rounded))
-                Text(daySummary).font(.callout).foregroundStyle(.secondary)
+        HStack(alignment: .center, spacing: 20) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(app.now, format: .dateTime.weekday(.wide).month(.wide).day()).font(.system(size: 11, weight: .semibold)).tracking(0.8).textCase(.uppercase).foregroundStyle(Color.pilot)
+                Text("Today").font(.system(size: 32, weight: .semibold))
+                Text(daySummary).font(.callout).foregroundStyle(.secondary).lineLimit(2)
             }.frame(maxWidth: .infinity, alignment: .leading)
-            VStack(alignment: .trailing, spacing: 10) {
-                Button("Plan my study", systemImage: "calendar.badge.clock") { app.showingStudyPlanner = true }
-                    .buttonStyle(.borderedProminent).controlSize(.large)
-                Button(focus.state == nil ? "Start a focus session" : "Return to focus", systemImage: "timer") {
-                    if focus.state == nil { focus.start(minutes: 25, subjectID: assignments.first(where: { !$0.isDone })?.subjectID) }
-                    app.section = .focus
-                }.buttonStyle(.plain).font(.callout.weight(.medium)).foregroundStyle(Color.pilot)
-            }
+            Button(focus.state == nil ? "Start focus" : "Return to focus", systemImage: "timer") {
+                if focus.state == nil { focus.start(minutes: 25, subjectID: assignments.first(where: { !$0.isDone })?.subjectID) }
+                app.section = .focus
+            }.buttonStyle(.borderedProminent).controlSize(.large)
         }
-        .padding(.horizontal, 26).padding(.vertical, 24)
-        .background {
-            ZStack(alignment: .trailing) {
-                LinearGradient(colors: [Color.pilot.opacity(0.16), Color.pilotBlue.opacity(0.09), Color(nsColor: .controlBackgroundColor).opacity(0.94)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                Circle().fill(Color.pilotBlue.opacity(0.07)).frame(width: 230, height: 230).offset(x: 70, y: -80)
-                Circle().fill(Color.pilot.opacity(0.06)).frame(width: 150, height: 150).offset(x: -100, y: 90)
-            }.clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        }
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Color.pilot.opacity(0.12), lineWidth: 0.7))
-        .shadow(color: Color.pilot.opacity(0.08), radius: 24, y: 10)
+        .padding(.horizontal, 22).padding(.vertical, 18)
+        .background(Color.pilot.opacity(0.085), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(Color.pilot.opacity(0.13), lineWidth: 0.7))
     }
     private var daySummary: String {
         if overdue > 0 { return "\(overdue) overdue assignment\(overdue == 1 ? "" : "s") need your attention." }
@@ -115,26 +109,31 @@ struct DashboardView: View {
         }.padding(.horizontal, 9).padding(.vertical, 7).background(Color(nsColor: .controlBackgroundColor).opacity(0.72), in: Capsule())
     }
     private var summary: some View {
-        HStack(spacing: 14) {
-            summaryButton(value: dueToday, label: "Due today", filter: .today, symbol: "calendar", tint: .pilot)
-            summaryButton(value: overdue, label: "Overdue", filter: .overdue, symbol: "clock.badge.exclamationmark", tint: overdue > 0 ? .orange : .pilotBlue)
-            let minutes = DailyStudyProgress(sessions: sessions.map(\.record), goalMinutes: goalMinutes, now: app.now).minutes
+        let minutes = DailyStudyProgress(sessions: sessions.map(\.record), goalMinutes: goalMinutes, now: app.now).minutes
+        return HStack(spacing: 0) {
+            summaryButton(value: dueToday, label: "Due today", filter: .today, tint: .pilot)
+            Divider().frame(height: 45)
+            summaryButton(value: overdue, label: "Overdue", filter: .overdue, tint: overdue > 0 ? .orange : .pilotBlue)
+            Divider().frame(height: 45)
             Button { app.section = .focus } label: {
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack { Label("Study time", systemImage: "timer").font(.caption.weight(.semibold)).foregroundStyle(Color.pilot); Spacer(); Image(systemName: "arrow.up.right").font(.caption2).foregroundStyle(.tertiary) }
-                    HStack(alignment: .firstTextBaseline, spacing: 5) { Text("\(minutes)").font(.system(size: 30, weight: .medium)).monospacedDigit(); Text("/ \(goalMinutes) min").font(.caption).foregroundStyle(.secondary) }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("FOCUS TODAY").font(.system(size: 10, weight: .semibold)).tracking(0.5).foregroundStyle(.secondary)
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text("\(minutes)").font(.system(size: 23, weight: .semibold)).monospacedDigit()
+                        Text("/ \(goalMinutes) min").font(.caption).foregroundStyle(.secondary)
+                    }
                     ProgressView(value: min(1, Double(minutes) / Double(max(1, goalMinutes)))).tint(Color.pilot)
-                }.frame(maxWidth: .infinity, alignment: .leading).pilotCard().contentShape(Rectangle())
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 20).contentShape(Rectangle())
             }.buttonStyle(.plain)
-        }
+        }.padding(.vertical, 13).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 13))
+            .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color(nsColor: .separatorColor).opacity(0.42), lineWidth: 0.7))
     }
-    private func summaryButton(value: Int, label: String, filter: AssignmentTimeFilter, symbol: String, tint: Color) -> some View {
+    private func summaryButton(value: Int, label: String, filter: AssignmentTimeFilter, tint: Color) -> some View {
         Button { app.assignmentTimeFilter = filter; app.section = .assignments } label: {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack { Label(label, systemImage: symbol).font(.caption.weight(.semibold)).foregroundStyle(tint); Spacer(); Image(systemName: "arrow.up.right").font(.caption2).foregroundStyle(.tertiary) }
-                Text("\(value)").font(.system(size: 30, weight: .medium)).monospacedDigit().foregroundStyle(tint)
-                Text(value == 0 ? "Nothing waiting" : "Open assignments").font(.caption).foregroundStyle(.secondary)
-            }.frame(maxWidth: .infinity, alignment: .leading).pilotCard().contentShape(Rectangle())
+            VStack(alignment: .leading, spacing: 5) {
+                Text(label.uppercased()).font(.system(size: 10, weight: .semibold)).tracking(0.5).foregroundStyle(.secondary)
+                Text("\(value)").font(.system(size: 23, weight: .semibold)).monospacedDigit().foregroundStyle(tint)
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 20).contentShape(Rectangle())
         }.buttonStyle(.plain).help("View assignments \(label)")
     }
     private var notebookShelf: some View {
@@ -154,31 +153,6 @@ struct DashboardView: View {
                 }
             }
         }.pilotCard()
-    }
-    private var utilities: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            QuickTaskEntry(compact: true)
-            Divider()
-            WorkloadWeekView(assignments: assignments.map(\.record), now: app.now)
-            Divider()
-            studyProgress
-            Divider()
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Shortcuts").font(.system(size: 13, weight: .semibold))
-                Button(focus.state == nil ? "Start 25-minute focus" : "Open focus session", systemImage: "timer") { if focus.state == nil { focus.start(minutes: 25, subjectID: nil) }; app.section = .focus }
-                Button("New note", systemImage: "square.and.pencil") { app.section = .notes; app.createNote = true }
-                Button("Review flashcards (\(cards.filter { $0.dueDate <= app.now }.count) due)", systemImage: "rectangle.on.rectangle") { app.section = .revision }
-                Button("Open assistant", systemImage: "bubble.left") { app.ask("What tasks are due today?") }
-            }.buttonStyle(.link).font(.callout)
-        }.frame(maxWidth: .infinity, alignment: .leading)
-    }
-    private var studyProgress: some View {
-        let value = DailyStudyProgress(sessions: sessions.map(\.record), goalMinutes: goalMinutes, now: app.now)
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack { Text("Study time").font(.system(size: 13, weight: .semibold)); Spacer(); Text("\(value.minutes) / \(value.goalMinutes) min").font(.caption).monospacedDigit().foregroundStyle(.secondary) }
-            ProgressView(value: value.fraction)
-            Text("\(StudyAnalytics.streak(sessions: sessions.map(\.record), now: app.now))-day streak · \(assignments.filter(\.isDone).count) assignments completed").font(.caption).foregroundStyle(.secondary)
-        }
     }
 }
 struct WorkloadWeekView: View {

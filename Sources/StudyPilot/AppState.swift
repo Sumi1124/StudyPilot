@@ -148,18 +148,15 @@ extension Assignment {
 }
 extension View {
     func pilotCard() -> some View {
-        self.padding(18)
-            .background(Color(nsColor: .controlBackgroundColor).opacity(0.96), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.white.opacity(0.18), lineWidth: 0.5))
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color(nsColor: .separatorColor).opacity(0.20), lineWidth: 0.5))
-            .shadow(color: Color.pilot.opacity(0.045), radius: 18, y: 7)
+        self.padding(16)
+            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(Color(nsColor: .separatorColor).opacity(0.42), lineWidth: 0.7))
     }
 }
 struct PilotBackdrop: View {
     var body: some View {
         ZStack {
             Color.pilotCanvas
-            LinearGradient(colors: [Color.pilot.opacity(0.055), Color.clear, Color.pilotBlue.opacity(0.035)], startPoint: .topLeading, endPoint: .bottomTrailing)
         }.ignoresSafeArea()
     }
 }

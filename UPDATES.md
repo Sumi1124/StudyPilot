@@ -1,5 +1,9 @@
 # In-app updates
 
+## Today screen and agenda (1.21.0)
+
+Today uses a compact header and one status strip, with the schedule visible before notebooks and extras. Study blocks tied to the same task are grouped by day; expand one group to see and complete individual sessions. The sidebar and cards use flatter, quieter surfaces.
+
 Settings → App updates → Check for Updates (also in the StudyPilot application menu) uses Sparkle 2.10.0. The native update window downloads, verifies the Ed25519 signature, installs and relaunches. Automatic checks start disabled. Finish an active focus session before checking. Workspace data remains in Application Support.
 
 The appcast is hosted at `https://raw.githubusercontent.com/Sumi1124/StudyPilot/main/updates/appcast.xml`. Archives are immutable GitHub Release assets. The public verification key is embedded in Info.plist. The private key is deliberately outside this source tree in the original development workspace’s `work/updater-signing-private.key`; preserve it securely. Never commit that key. Only its owner can sign future updates trusted by this app.
