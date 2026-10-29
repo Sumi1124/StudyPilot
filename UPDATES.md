@@ -43,3 +43,7 @@ Version 1.18.1 groups same titled study sessions and other calendar events withi
 Version 1.19.0 adds a school programme choice in Settings. MYP assignments can be tagged as class tasks, assessments, or Personal Project work while retaining criteria A–D. DP assignments can be tagged as coursework, internal assessments, Extended Essay, Theory of Knowledge, CAS, or exams. The Assignments screen adds a work type filter and workload summary. Academic progress shows the existing MYP criterion view for MYP students and a DP deadline and core work overview for DP students. Tags are stored with assignment records and included in existing JSON backups. These are personal planning tools, not official IB grade calculations.
 
 Version 1.19.1 also accepts IB work type tags during JSON backup validation, so tagged assignments export and restore correctly.
+
+## In-app local model setup (1.20.0)
+
+Version 1.20.0 makes Download 0.8B model available when the local service is stopped. It starts an installed Ollama runtime automatically. If the runtime is missing or too old for Qwen 3.5, StudyPilot downloads a pinned official macOS runtime archive, verifies its SHA-256 checksum, unpacks it inside Application Support, starts it on a separate loopback port, and continues the model download with progress in Settings. The model remains optional, and StudyPilot does not install a system-wide runtime or open a browser for setup.

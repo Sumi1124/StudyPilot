@@ -74,6 +74,7 @@ private final class LoopbackSessionDelegate: NSObject, URLSessionTaskDelegate, @
 
 public actor OllamaClient {
     private let session: URLSession
+    private var base = OllamaWire.base
     public init() {
         let config = URLSessionConfiguration.ephemeral
         config.connectionProxyDictionary = [:]
@@ -84,10 +85,11 @@ public actor OllamaClient {
         session = URLSession(configuration: config, delegate: LoopbackSessionDelegate(), delegateQueue: nil)
     }
     private func request(_ path: String, body: Data? = nil, timeout: TimeInterval) -> URLRequest {
-        var value = URLRequest(url: OllamaWire.base.appendingPathComponent(path), timeoutInterval: timeout)
+        var value = URLRequest(url: base.appendingPathComponent(path), timeoutInterval: timeout)
         if let body { value.httpMethod = "POST"; value.httpBody = body; value.setValue("application/json", forHTTPHeaderField: "Content-Type") }
         return value
     }
+    public func useManagedRuntime() { base = URL(string: "http://127.0.0.1:11435")! }
     private func validate(_ response: URLResponse, data: Data? = nil) throws {
         guard let http = response as? HTTPURLResponse else { throw PlanningError.invalid("Ollama returned an invalid response.") }
         if http.statusCode == 404 { throw PlanningError.invalid("Qwen 3.5 0.8B is not installed. Open Model setup to download it.") }

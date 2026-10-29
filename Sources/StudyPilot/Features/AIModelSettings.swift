@@ -19,14 +19,13 @@ struct AIModelSettings: View {
                 Button("Stop download") { chat.models.cancelDownload() }
             } else {
                 HStack {
-                    Button(chat.models.checking ? "Checking…" : "Check Ollama") { Task { await chat.models.refresh() } }.disabled(chat.models.checking)
+                    Button(chat.models.checking ? "Checking…" : "Check local service") { Task { await chat.models.refresh() } }.disabled(chat.models.checking)
                     if !chat.models.ready {
-                        Button("Download 0.8B model") { chat.models.download() }.disabled(!chat.models.reachable || chat.models.checking)
+                        Button("Download 0.8B model") { chat.models.download() }.disabled(chat.models.checking)
                     } else { Label("Installed", systemImage: "checkmark.circle").foregroundStyle(.secondary) }
                 }.disabled(chat.generating)
             }
-            Link("Install or update Ollama…", destination: URL(string: "https://ollama.com/download")!).font(.caption)
-            Text("Optional: start Ollama before using Qwen. Download only if you want this model. The first download needs internet and roughly 1 GB of storage; afterward chat runs locally. StudyPilot connects only to 127.0.0.1:11434 and never switches models automatically.")
+            Text("Download fetches Qwen here in StudyPilot. If the local engine is missing or too old, StudyPilot downloads a verified copy first. The model needs about 1 GB of storage and remains optional.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if chat.models.choice == .qwen08 && !chat.models.ready {
                 Text("Saved workspace answers still work while the model is unavailable.").font(.caption).foregroundStyle(.secondary)
