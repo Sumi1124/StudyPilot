@@ -14,6 +14,9 @@ struct SettingsView: View {
     @AppStorage("appearance") private var appearance = "System"
     @AppStorage("remindersEnabled") private var remindersEnabled = false
     @AppStorage("ibProgramme") private var ibProgramme = "General"
+    @AppStorage("companionEnabled") private var companionEnabled = false
+    @AppStorage("companionName") private var companionName = "Mochi"
+    @ObservedObject private var updater = AppUpdater.shared
     @State private var backups: [URL] = []
     @State private var candidate: BackupEnvelope?
     @State private var candidateName = ""
@@ -50,8 +53,16 @@ struct SettingsView: View {
                     Text("Your color applies to navigation, buttons, charts, and highlights. Changes appear immediately.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+                Section("Study companion") {
+                    Toggle("Show my study companion", isOn: $companionEnabled)
+                    if companionEnabled { TextField("Companion name", text: $companionName).onChange(of: companionName) { companionName = String(companionName.prefix(24)) } }
+                    Text("A small companion in Focus. Care for it whenever you like; completed focus sessions help it grow. It never sends reminders or loses progress when you take time off.").font(.caption).foregroundStyle(.secondary)
+                }
                 Section("App updates") {
                     LabeledContent("Installed version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development")
+                    if let version = updater.availableVersion { Label("StudyPilot \(version) is available", systemImage: "arrow.down.circle.fill").foregroundStyle(Color.pilot) }
+                    else if updater.lastAvailabilityCheck != nil { Text("No newer version found in the last check.").font(.caption).foregroundStyle(.secondary) }
+                    if let error = updater.availabilityError { Text(error).font(.caption).foregroundStyle(.secondary) }
                     AppUpdateButton()
                     Text("Download and install signed StudyPilot updates here. The app relaunches when installation is complete.").font(.caption).foregroundStyle(.secondary)
                     if focus.state != nil { Text("Finish the active focus session before updating.").font(.caption).foregroundStyle(.secondary) }

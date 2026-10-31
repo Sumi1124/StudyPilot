@@ -1,5 +1,11 @@
 # In-app updates
 
+## Optional study companion and update notice (1.23.0)
+
+Settings → Study companion enables an original little creature in Focus. Give it a name, offer a snack, play, or rest. Completed focus sessions help it grow through three stages; it never loses progress or sends reminders. It starts off and can be hidden at any time.
+
+StudyPilot now quietly checks the signed update feed when the workspace opens or becomes active. When a newer build exists, the sidebar and toolbar show an update notice that opens the existing in-app Sparkle installer. Settings also shows the available version. The notice does not start installation by itself.
+
 ## Notebook PDF import (1.22.1)
 
 Notebooks now put a direct Import PDF or text button beside the source list. The file picker no longer disables PDFs whose macOS file type metadata is unusual; StudyPilot validates the chosen file itself. The import accepts PDFs up to 100 MB and 500 pages and up to 1 MB of extracted text per source. Import errors remain visible beside the button after the file picker closes. The app also tells you when image-only pages were skipped; a fully scanned PDF needs text recognition before import. PDFs remain on your Mac; the notebook stores a searchable text copy.

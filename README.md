@@ -45,6 +45,8 @@ New in **1.22.0**: choose Forest, Ocean, Violet, Rose, Sunset, Graphite, or a cu
 
 New in **1.22.1**: importing a PDF is now a direct action in each notebook. Larger school PDFs are supported, and any import error or skipped image-only pages stay visible beside the button. PDFs need selectable text for source questions.
 
+New in **1.23.0**: an optional study companion lives in Focus, grows with completed sessions, and can be switched off in Settings. A visible in-app notice now appears when a newer StudyPilot update is available.
+
 <table>
   <tr>
     <td width="50%" valign="top">

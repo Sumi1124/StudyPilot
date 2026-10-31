@@ -13,6 +13,7 @@ struct FocusView: View {
     @State private var subjectID: UUID?
     @State private var duration = 25
     @State private var ending = false
+    @AppStorage("companionEnabled") private var companionEnabled = false
     private var shownSeconds: Int { Int(ceil(focus.state == nil ? Double(duration * 60) : focus.remaining)) }
     var body: some View {
         ScrollView {
@@ -69,6 +70,7 @@ struct FocusView: View {
                         if weekly.isEmpty { Text("Your study time will appear here after your first session.").foregroundStyle(.secondary).font(.callout) }
                     }.frame(width: 235).pilotCard()
                 }
+                if companionEnabled { StudyCompanionView(sessions: sessions.map(\.record)) }
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Session history").font(.title3.bold())
                     if sessions.isEmpty { Text("No sessions recorded yet.").foregroundStyle(.secondary).padding(.vertical, 20) }

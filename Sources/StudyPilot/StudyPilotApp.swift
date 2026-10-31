@@ -72,6 +72,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(FocusController.self) private var focus
     private let ticks = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private let updateCheckTicks = Timer.publish(every: 3600, on: .main, in: .common).autoconnect()
     @Environment(AppState.self) private var app
     @ObservedObject private var updater = AppUpdater.shared
     @State private var visibility: NavigationSplitViewVisibility = .all
@@ -79,6 +80,7 @@ struct RootView: View {
     @AppStorage("accentColor") private var accentColor = AppAccent.forest.rawValue
     @AppStorage("customAccentHex") private var customAccentHex = "355F9C"
     @AppStorage("completedFirstRunSetupV1") private var completedFirstRunSetup = false
+    @AppStorage("companionEnabled") private var companionEnabled = false
     private func sidebarRow(_ section: AppSection) -> some View {
         HStack {
             Label { Text(section.rawValue).font(.system(size: 13, weight: app.section == section ? .medium : .regular)) } icon: { Image(systemName: section.symbol).font(.system(size: 14)).foregroundStyle(app.section == section ? Color.notebookInk : .secondary) }
@@ -115,8 +117,18 @@ struct RootView: View {
                         }
                     }
                     Section("Study") { ForEach([AppSection.notes, .revision, .focus, .chat]) { sidebarRow($0) } }
+                    if companionEnabled { Button { app.section = .focus } label: { Label("Visit study companion", systemImage: "face.smiling").font(.system(size: 12)).foregroundStyle(Color.pilot) }.buttonStyle(.plain).padding(.horizontal, 18).padding(.vertical, 7) }
                     Section("Organize") { ForEach([AppSection.progress, .library]) { sidebarRow($0) } }
                 }.listStyle(.sidebar).environment(\.defaultMinListRowHeight, 30).scrollContentBackground(.hidden)
+                if let version = updater.availableVersion {
+                    Button {
+                        if let error = updater.check() { app.error = error }
+                    } label: {
+                        Label("Update \(version) available", systemImage: "arrow.down.circle.fill")
+                            .font(.system(size: 12, weight: .semibold)).frame(maxWidth: .infinity, alignment: .leading)
+                    }.buttonStyle(.borderedProminent).disabled(!updater.canCheck || focus.state != nil)
+                        .padding(.horizontal, 12).padding(.bottom, 8)
+                }
                 Button { app.showingStudyPlanner = true } label: {
                     HStack { Image(systemName: "calendar.badge.clock"); Text("Plan my study").font(.system(size: 12, weight: .semibold)); Spacer(); Image(systemName: "arrow.up.right").font(.caption2).opacity(0.75) }
                         .foregroundStyle(Color(nsColor: .windowBackgroundColor)).padding(11)
@@ -143,6 +155,10 @@ struct RootView: View {
             }.frame(maxWidth: .infinity, maxHeight: .infinity).background { PilotBackdrop() }
                 .toolbar {
                     ToolbarItemGroup(placement: .primaryAction) {
+                        if updater.availableVersion != nil {
+                            Button { if let error = updater.check() { app.error = error } } label: { Image(systemName: "arrow.down.circle.fill") }
+                                .help("StudyPilot update available").disabled(!updater.canCheck || focus.state != nil)
+                        }
                         AppearanceControl()
                         Button { app.showingSearch = true } label: { Image(systemName: "magnifyingglass") }.help("Search workspace (⌘K)")
                         Button { app.showingAssignment = true } label: { Label("New assignment", systemImage: "plus") }.help("New assignment (⌘N)")
@@ -189,6 +205,7 @@ struct RootView: View {
             }
             .alert("Something needs attention", isPresented: Binding(get: { app.error != nil }, set: { if !$0 { app.error = nil } })) { Button("OK") { app.error = nil } } message: { Text(app.error ?? "") }
             .onReceive(NotificationCenter.default.publisher(for: .studyPilotQueryFailed)) { notice in app.error = notice.userInfo?["message"] as? String }
+            .onReceive(updateCheckTicks) { _ in Task { await updater.refreshAvailability() } }
             .onReceive(ticks) { _ in
                 focus.tick(context: context)
                 if let change = app.completionUndo, change.expires < Date() { app.completionUndo = nil }
@@ -196,6 +213,7 @@ struct RootView: View {
                 if !updater.isBusy && !app.showingStudyPlanner { planning.removeFinishedTaskSessions(context: context); planning.checkUnfinished(context: context) }
             }
             .task {
+                Task { await updater.refreshAvailability() }
                 if let folder = context.container.configurations.first?.url.deletingLastPathComponent() { planning.configure(folder: folder); chat.configure(folder: folder); chat.calendar.configure(context: context, planning: planning) }
                 app.planning = planning
                 ReminderService.shared.finishedTaskIDs = Set(planning.settings.completedTasks?.keys.map { $0 } ?? [])
@@ -206,7 +224,7 @@ struct RootView: View {
                 do { try BackupService.automatic(context) } catch { app.error = "Automatic backup could not be created: \(error.localizedDescription)" }
                 if !completedFirstRunSetup && assignments.isEmpty { app.showingFirstRunSetup = true }
             }
-            .onChange(of: scenePhase) { if scenePhase == .active { if !updater.isBusy && !app.showingStudyPlanner { planning.removeFinishedTaskSessions(context: context, force: true); planning.checkUnfinished(context: context, force: true) }; focus.tick(context: context); Task { await ReminderService.shared.reconcile(context: context) } } }
+            .onChange(of: scenePhase) { if scenePhase == .active { if !updater.isBusy && !app.showingStudyPlanner { planning.removeFinishedTaskSessions(context: context, force: true); planning.checkUnfinished(context: context, force: true) }; focus.tick(context: context); Task { await ReminderService.shared.reconcile(context: context); await updater.refreshAvailability() } } }
             .onChange(of: focus.error) { if let error = focus.error { app.error = error; focus.error = nil } }
             .preferredColorScheme(appearance == "Light" ? .light : appearance == "Dark" ? .dark : nil)
             .tint(AppAccent.color(name: accentColor, customHex: customAccentHex))
