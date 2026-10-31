@@ -56,7 +56,7 @@ struct SettingsView: View {
                 Section("Study companion") {
                     Toggle("Show my study companion", isOn: $companionEnabled)
                     if companionEnabled { TextField("Companion name", text: $companionName).onChange(of: companionName) { companionName = String(companionName.prefix(24)) } }
-                    Text("A small companion in Focus. Care for it whenever you like; completed focus sessions help it grow. It never sends reminders or loses progress when you take time off.").font(.caption).foregroundStyle(.secondary)
+                    Text("A small companion in Focus. Every 25 minutes of completed focus time earns a food ticket; one ticket buys a snack. Play and rest are free. It never sends reminders or loses progress when you take time off.").font(.caption).foregroundStyle(.secondary)
                 }
                 Section("App updates") {
                     LabeledContent("Installed version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development")

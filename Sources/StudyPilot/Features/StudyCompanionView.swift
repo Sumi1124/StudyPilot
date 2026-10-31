@@ -9,8 +9,10 @@ struct StudyCompanionView: View {
     @AppStorage("companionSnackAt") private var snackAt = 0.0
     @AppStorage("companionPlayAt") private var playAt = 0.0
     @AppStorage("companionRestAt") private var restAt = 0.0
+    @AppStorage("companionTicketsSpent") private var ticketsSpent = 0
 
     private var completed: Int { sessions.filter { $0.completed && $0.durationSeconds >= 300 }.count }
+    private var tickets: CompanionTickets { CompanionTickets(sessions: sessions, spent: ticketsSpent) }
     private var stage: String { completed >= 20 ? "Study buddy" : completed >= 5 ? "Explorer" : "Hatchling" }
     private var nextMilestone: Int { completed < 5 ? 5 : 20 }
     private func level(_ timestamp: Double) -> Double {
@@ -34,7 +36,18 @@ struct StudyCompanionView: View {
                         Text("\(stage) · \(mood)").font(.callout).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Text("\(completed) focus sessions").font(.caption).foregroundStyle(.secondary)
+                    VStack(alignment: .trailing, spacing: 3) {
+                        Label("\(tickets.balance) tickets", systemImage: "ticket.fill")
+                            .font(.caption.weight(.semibold)).foregroundStyle(Color.pilot)
+                        Text("\(completed) focus sessions").font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    ProgressView(value: tickets.secondsTowardsNext, total: Double(CompanionTickets.secondsPerTicket))
+                        .tint(Color.pilot)
+                        .accessibilityLabel("Progress toward next food ticket")
+                    Text("\(tickets.minutesUntilNext) min of completed focus until the next ticket · 25 min earns 1")
+                        .font(.caption2).foregroundStyle(.secondary)
                 }
                 HStack(spacing: 12) {
                     need("Snack", value: level(snackAt), symbol: "carrot.fill")
@@ -42,7 +55,12 @@ struct StudyCompanionView: View {
                     need("Rest", value: level(restAt), symbol: "moon.stars.fill")
                 }
                 HStack {
-                    Button("Give snack") { snackAt = Date().timeIntervalSince1970 }
+                    Button("Give snack · 1 ticket") {
+                        guard tickets.balance > 0 else { return }
+                        ticketsSpent = max(0, ticketsSpent) + 1
+                        snackAt = Date().timeIntervalSince1970
+                    }.disabled(tickets.balance == 0)
+                        .help(tickets.balance == 0 ? "Complete focus time to earn a food ticket." : "Spend one ticket to feed your companion.")
                     Button("Play") { playAt = Date().timeIntervalSince1970 }
                     Button("Rest") { restAt = Date().timeIntervalSince1970 }
                     Spacer()

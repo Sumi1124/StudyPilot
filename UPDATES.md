@@ -1,5 +1,9 @@
 # In-app updates
 
+## Food tickets for studying (1.23.1)
+
+Every 25 minutes of completed Focus time earns one food ticket. Short completed sessions add together; breaks and unfinished sessions do not earn tickets. Feeding the companion spends one ticket, while play and rest remain free. Focus shows the ticket balance and time until the next ticket. Previously recorded completed focus time counts, and hiding the companion keeps the balance.
+
 ## Optional study companion and update notice (1.23.0)
 
 Settings → Study companion enables an original little creature in Focus. Give it a name, offer a snack, play, or rest. Completed focus sessions help it grow through three stages; it never loses progress or sends reminders. It starts off and can be hidden at any time.

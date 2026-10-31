@@ -47,6 +47,8 @@ New in **1.22.1**: importing a PDF is now a direct action in each notebook. Larg
 
 New in **1.23.0**: an optional study companion lives in Focus, grows with completed sessions, and can be switched off in Settings. A visible in-app notice now appears when a newer StudyPilot update is available.
 
+New in **1.23.1**: completed focus time earns food tickets. Each 25 minutes grants one ticket, and feeding the companion costs one. The companion shows your balance and progress toward the next ticket.
+
 <table>
   <tr>
     <td width="50%" valign="top">
