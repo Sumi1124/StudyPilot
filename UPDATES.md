@@ -1,5 +1,9 @@
 # In-app updates
 
+## Notebook PDF import (1.22.1)
+
+Notebooks now put a direct Import PDF or text button beside the source list. The file picker no longer disables PDFs whose macOS file type metadata is unusual; StudyPilot validates the chosen file itself. The import accepts PDFs up to 100 MB and 500 pages and up to 1 MB of extracted text per source. Import errors remain visible beside the button after the file picker closes. The app also tells you when image-only pages were skipped; a fully scanned PDF needs text recognition before import. PDFs remain on your Mac; the notebook stores a searchable text copy.
+
 ## Accent colors (1.22.0)
 
 Settings → Appearance now offers six accent colors and a macOS color wheel for a custom choice, with a quicker menu in the toolbar. The selected color persists across launches and is shared by primary controls and highlights in Light and Dark mode. Custom colors are adjusted for readable contrast on each appearance.

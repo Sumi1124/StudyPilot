@@ -45,8 +45,8 @@ import Testing
 @Test func notebookImportAndQuestionBoundariesRejectInvalidInput() throws {
     #expect(throws: (any Error).self) { try NotebookResearch.validateSource(title: "Source", text: " \n ") }
     #expect(throws: (any Error).self) { try NotebookResearch.validateSource(title: " ", text: "Text") }
-    #expect(throws: (any Error).self) { try NotebookResearch.validateSource(title: "Source", text: String(repeating: "a", count: 200_001)) }
-    try NotebookResearch.validateSource(title: "Source", text: String(repeating: "a", count: 200_000))
+    #expect(throws: (any Error).self) { try NotebookResearch.validateSource(title: "Source", text: String(repeating: "a", count: NotebookResearch.maximumSourceBytes + 1)) }
+    try NotebookResearch.validateSource(title: "Source", text: String(repeating: "a", count: NotebookResearch.maximumSourceBytes))
     #expect(throws: (any Error).self) { try NotebookQuestion(question: "Question", passages: []) }
     let passages = NotebookResearch.passages(in: NoteRecord(body: "Some source text"))
     #expect(throws: (any Error).self) { try NotebookQuestion(question: "   ", passages: passages) }

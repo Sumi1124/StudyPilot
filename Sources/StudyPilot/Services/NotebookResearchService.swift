@@ -7,30 +7,37 @@ import FoundationModels
 #endif
 
 enum NotebookSourceImport {
-    static func read(_ url: URL) throws -> (title: String, text: String) {
+    static func read(_ url: URL) throws -> (title: String, text: String, warning: String?) {
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
         let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-        guard size <= 20_000_000 else { throw PlanningError.invalid("Choose a file smaller than 20 MB.") }
+        guard size <= 100_000_000 else { throw PlanningError.invalid("Choose a file smaller than 100 MB.") }
         let title = url.deletingPathExtension().lastPathComponent
         let text: String
+        var warning: String?
         if url.pathExtension.lowercased() == "pdf" {
-            guard let pdf = PDFDocument(url: url), !pdf.isLocked, pdf.pageCount <= 300 else { throw PlanningError.invalid("Choose an unlocked PDF with up to 300 pages.") }
+            guard let pdf = PDFDocument(url: url) else { throw PlanningError.invalid("This PDF could not be opened. Try downloading a fresh copy of the file.") }
+            guard !pdf.isLocked else { throw PlanningError.invalid("Unlock this PDF before importing it.") }
+            guard pdf.pageCount <= 500 else { throw PlanningError.invalid("Choose a PDF with up to 500 pages.") }
             var pages = ""
+            var unreadablePages = 0
             for index in 0..<pdf.pageCount {
                 try Task.checkCancellation()
-                if let page = pdf.page(at: index)?.string, !page.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    pages += "[Page \(index + 1)]\n" + page + "\n\n"
-                    guard pages.utf8.count <= NotebookResearch.maximumSourceBytes else { throw PlanningError.invalid("This PDF exceeds 200 KB of extracted text. Import a shorter section.") }
-                }
+                guard let page = pdf.page(at: index) else { continue }
+                let extracted = page.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                guard !extracted.isEmpty else { unreadablePages += 1; continue }
+                pages += "[Page \(index + 1)]\n" + extracted + "\n\n"
+                guard pages.utf8.count <= NotebookResearch.maximumSourceBytes else { throw PlanningError.invalid("This PDF contains over 1 MB of text. Import a shorter section.") }
             }
+            guard !pages.isEmpty else { throw PlanningError.invalid("This PDF has no selectable text. Export it with text recognition (OCR) and try again.") }
+            if unreadablePages > 0 { warning = "\(unreadablePages) PDF page\(unreadablePages == 1 ? "" : "s") had no selectable text and were skipped." }
             text = pages
         } else {
             guard ["txt", "md", "markdown"].contains(url.pathExtension.lowercased()) else { throw PlanningError.invalid("Import a PDF, Markdown, or plain text file.") }
             text = try String(contentsOf: url, encoding: .utf8)
         }
         try NotebookResearch.validateSource(title: title, text: text)
-        return (title, text)
+        return (title, text, warning)
     }
 }
 

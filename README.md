@@ -43,6 +43,8 @@ New in **1.21.0**: a calmer Today screen places the agenda above secondary mater
 
 New in **1.22.0**: choose Forest, Ocean, Violet, Rose, Sunset, Graphite, or a custom color from the macOS color wheel in Settings → Appearance. The toolbar Appearance menu offers quick switching. The accent updates navigation, buttons, charts, and highlights immediately and works with Light, Dark, or your Mac's appearance.
 
+New in **1.22.1**: importing a PDF is now a direct action in each notebook. Larger school PDFs are supported, and any import error or skipped image-only pages stay visible beside the button. PDFs need selectable text for source questions.
+
 <table>
   <tr>
     <td width="50%" valign="top">

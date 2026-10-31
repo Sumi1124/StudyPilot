@@ -51,7 +51,7 @@ public struct NotebookAnswer: Equatable, Sendable {
 public enum NotebookResearch {
     public static let sourceTag = "studypilot:source"
     public static let answerTag = "studypilot:answer"
-    public static let maximumSourceBytes = 200_000
+    public static let maximumSourceBytes = 1_000_000
     public static func bounded(_ value: String, bytes: Int) -> String {
         var result = "", count = 0
         for character in value {
@@ -63,8 +63,8 @@ public enum NotebookResearch {
     }
     public static func validateSource(title: String, text: String) throws {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, title.count <= 300 else { throw PlanningError.invalid("Give the source a title of up to 300 characters.") }
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw PlanningError.invalid("No readable text was found. Scanned PDFs need OCR before importing.") }
-        guard text.utf8.count <= maximumSourceBytes else { throw PlanningError.invalid("This source exceeds 200 KB of extracted text. Split it into smaller documents before importing.") }
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw PlanningError.invalid("No readable text was found in this file. Check that its pages contain writing.") }
+        guard text.utf8.count <= maximumSourceBytes else { throw PlanningError.invalid("This source exceeds 1 MB of text. Split it into smaller documents before importing.") }
     }
     /// Non-overlapping, stable excerpts. The same text shown in citations is sent to the model.
     public static func passages(in note: NoteRecord) -> [NotebookPassage] {

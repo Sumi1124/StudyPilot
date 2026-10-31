@@ -114,6 +114,8 @@ private struct NotebookWorkspace: View {
     @State private var controller = NotebookResearchController()
     @State private var importer = false
     @State private var importing = false
+    @State private var importError: String?
+    @State private var importNotice: String?
     @State private var pasteSource = false
     @State private var existingNote = false
     @State private var editingNotebook = false
@@ -151,8 +153,8 @@ private struct NotebookWorkspace: View {
         .sheet(isPresented: $existingNote) { ExistingNotebookSource(notebook: notebook) { id in included.insert(id); readingID = id; tab = .read } }
         .sheet(isPresented: $editingNotebook) { NotebookEditor(notebook: notebook) }
         .sheet(item: $flashcards) { NoteFlashcardsView(title: $0.title, source: $0.body, subjectID: notebook.subjectID) }
-        .fileImporter(isPresented: $importer, allowedContentTypes: [.pdf, .plainText, UTType(filenameExtension: "md") ?? .plainText, UTType(filenameExtension: "markdown") ?? .plainText], allowsMultipleSelection: false) { result in
-            switch result { case .success(let urls): if let url = urls.first { importSource(url) }; case .failure(let failure): error = failure.localizedDescription }
+        .fileImporter(isPresented: $importer, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
+            switch result { case .success(let urls): if let url = urls.first { importSource(url) }; case .failure(let failure): importError = failure.localizedDescription }
         }
         .alert("Remove source?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
             Button("Cancel", role: .cancel) { deleting = nil }
@@ -190,10 +192,23 @@ private struct NotebookWorkspace: View {
     private var sourceRail: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack { Text("Sources").font(.headline); Spacer(); Text("\(included.count)/\(sources.count)").font(.caption).monospacedDigit().foregroundStyle(.secondary) }
-            Menu { Button("Import file…") { importer = true }; Button("Paste text…") { pasteSource = true }; Button("Add an existing note…") { existingNote = true } } label: {
-                Label("Add source", systemImage: "plus").frame(maxWidth: .infinity)
-            }.menuStyle(.borderedButton).disabled(importing || sources.count >= 50)
-            if importing { HStack { ProgressView().controlSize(.small); Text("Reading file…").font(.caption) } }
+            Button { importError = nil; importer = true } label: {
+                Label("Import PDF or text", systemImage: "doc.badge.plus").frame(maxWidth: .infinity)
+            }.buttonStyle(.borderedProminent).disabled(importing || sources.count >= 50)
+            HStack(spacing: 12) {
+                Button("Paste text…") { pasteSource = true }
+                Button("Use a note…") { existingNote = true }
+            }.font(.caption).buttonStyle(.link).disabled(importing || sources.count >= 50)
+            if importing { HStack { ProgressView().controlSize(.small); Text("Reading file…").font(.caption) }.foregroundStyle(.secondary) }
+            if let importError {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Could not import file").font(.caption.weight(.semibold))
+                    Text(importError).font(.caption2).fixedSize(horizontal: false, vertical: true)
+                    Button("Dismiss") { self.importError = nil }.font(.caption2)
+                }.foregroundStyle(.red).padding(10).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+            }
+            if let importNotice { Text(importNotice).font(.caption2).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true) }
             if !sources.isEmpty {
                 TextField("Find a source", text: $sourceSearch).textFieldStyle(.roundedBorder)
                 HStack {
@@ -205,7 +220,7 @@ private struct NotebookWorkspace: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 5) {
                     if sources.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) { Image(systemName: "doc.text").font(.title); Text("Your reading goes here").font(.callout.weight(.medium)); Text("Add a PDF, text file, or class note to start.").font(.caption).foregroundStyle(.secondary) }.padding(.vertical, 25)
+                        VStack(alignment: .leading, spacing: 10) { Image(systemName: "doc.text").font(.title); Text("Your reading goes here").font(.callout.weight(.medium)); Text("Import a PDF with selectable text, or paste your class notes.").font(.caption).foregroundStyle(.secondary) }.padding(.vertical, 25)
                     }
                     ForEach(visibleSources) { source in
                         HStack(alignment: .top, spacing: 7) {
@@ -380,14 +395,15 @@ private struct NotebookWorkspace: View {
         } catch { self.error = error.localizedDescription }
     }
     private func importSource(_ url: URL) {
-        guard !importing else { return }; importing = true
+        guard !importing else { return }; importing = true; importError = nil; importNotice = nil
+        let access = url.startAccessingSecurityScopedResource()
         Task {
-            defer { importing = false }
+            defer { if access { url.stopAccessingSecurityScopedResource() }; importing = false }
             do {
                 let value = try await Task.detached(priority: .userInitiated) { try NotebookSourceImport.read(url) }.value
                 let id = try NotebookSourceStorage.save(title: value.title, text: value.text, notebook: notebook, container: context.container)
-                included.insert(id); readingID = id; tab = .read
-            } catch { self.error = error.localizedDescription }
+                included.insert(id); readingID = id; tab = .read; importNotice = value.warning
+            } catch { importError = error.localizedDescription }
         }
     }
 }
@@ -418,7 +434,7 @@ private struct PastedNotebookSource: View {
             Text("Paste class material or a reading excerpt. A text copy is saved in this notebook.").font(.callout).foregroundStyle(.secondary)
             TextField("Source title", text: $title).textFieldStyle(.roundedBorder)
             TextEditor(text: $text).font(.body).border(Color.secondary.opacity(0.2)).accessibilityLabel("Source text")
-            Text("\(text.utf8.count.formatted()) / 200,000 bytes").font(.caption).foregroundStyle(.secondary)
+            Text("\(text.utf8.count.formatted()) / 1,000,000 bytes").font(.caption).foregroundStyle(.secondary)
             if let error { Text(error).font(.caption).foregroundStyle(.red) }
             HStack { Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction); Spacer(); Button("Add source") {
                 do { let id = try NotebookSourceStorage.save(title: title.trimmingCharacters(in: .whitespacesAndNewlines), text: text, notebook: notebook, container: context.container); added(id); dismiss() }
