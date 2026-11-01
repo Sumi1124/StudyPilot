@@ -1,5 +1,9 @@
 # In-app updates
 
+## A livelier study companion (1.24.0)
+
+The optional companion now reacts briefly to food, play, and rest. Choose an apple, onigiri, or toast for one study ticket each. Its appearance changes at Explorer and Study buddy milestones, while its growth and ticket balance continue to come from recorded focus sessions. Care actions stay in the Focus screen and remain optional.
+
 ## Food tickets for studying (1.23.1)
 
 Every 25 minutes of completed Focus time earns one food ticket. Short completed sessions add together; breaks and unfinished sessions do not earn tickets. Feeding the companion spends one ticket, while play and rest remain free. Focus shows the ticket balance and time until the next ticket. Previously recorded completed focus time counts, and hiding the companion keeps the balance.

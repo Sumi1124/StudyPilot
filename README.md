@@ -49,6 +49,8 @@ New in **1.23.0**: an optional study companion lives in Focus, grows with comple
 
 New in **1.23.1**: completed focus time earns food tickets. Each 25 minutes grants one ticket, and feeding the companion costs one. The companion shows your balance and progress toward the next ticket.
 
+New in **1.24.0**: the companion reacts when you feed, play, or rest. Choose from three snacks for one ticket each, and watch its appearance change as it grows from Hatchling to Explorer to Study buddy.
+
 <table>
   <tr>
     <td width="50%" valign="top">
