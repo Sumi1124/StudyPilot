@@ -3,9 +3,9 @@
   <channel>
     <title>StudyPilot updates</title>
     <item>
-      <title>StudyPilot 1.23.1</title>
+      <title>StudyPilot 1.24.0</title>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/Sumi1124/StudyPilot/releases/download/v1.23.1/StudyPilot-macOS.zip" length="5589064" type="application/octet-stream" sparkle:version="38" sparkle:shortVersionString="1.23.1" sparkle:edSignature="Lunq+/TV75oe5GtlLKx+I0H0+aWucFL0U4Nw/56dDwZ78D2tPCE+6iR2GMthGkLzjhMFt7VHA8wciL/bjKErCg==" />
+      <enclosure url="https://github.com/Sumi1124/StudyPilot/releases/download/v1.24.0/StudyPilot-macOS.zip" length="5616171" type="application/octet-stream" sparkle:version="39" sparkle:shortVersionString="1.24.0" sparkle:edSignature="+Ov4rHRJEoXtylNJYDP6ziSOqnd478NLriwpzpdG66+w/eNalGB4wHfxxyqkW4ml3oyZcQ94MS26fcmRQTJVBg==" />
     </item>
   </channel>
 </rss>
