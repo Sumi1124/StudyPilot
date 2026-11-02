@@ -1,6 +1,13 @@
 import Foundation
 
 public enum CodexSecurityPolicy {
+    public static func permitsStudyOnlyConfiguration(_ config: [String: Any]) -> Bool {
+        guard let features = config["features"] as? [String: Any],
+              config["web_search"] as? String == "disabled" else { return false }
+        return ["apps", "plugins", "shell_tool", "unified_exec", "code_mode", "code_mode_host", "apply_patch_freeform"]
+            .allSatisfy { features[$0] as? Bool == false }
+    }
+
     // The host process is confined as well as any model-requested operations.
     // Paths are passed as sandbox parameters, never interpolated into this program.
     public static let sandboxProfile = """

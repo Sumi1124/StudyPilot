@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
     for name in ['CodexHome', 'Workspace', 'Temporary']:
         (private/name).mkdir(mode=0o700)
     env = {'HOME': str(private), 'CODEX_HOME': str(private/'CodexHome'), 'TMPDIR': str(private/'Temporary'), 'PATH': '/usr/bin:/bin', 'LANG': 'en_US.UTF-8'}
-    cmd = sandbox(binary, private) + ['app-server', '--stdio', '--strict-config', '-c', 'features.shell_tool=false', '-c', 'features.apply_patch_freeform=false', '-c', 'web_search="disabled"', '-c', 'sandbox_mode="read-only"', '-c', 'cli_auth_credentials_store="file"', '-c', 'forced_login_method="chatgpt"']
+    cmd = sandbox(binary, private) + ['app-server', '--stdio', '--strict-config', '-c', 'features.shell_tool=false', '-c', 'features.unified_exec=false', '-c', 'features.apps=false', '-c', 'features.plugins=false', '-c', 'features.code_mode=false', '-c', 'features.code_mode_host=false', '-c', 'features.apply_patch_freeform=false', '-c', 'web_search="disabled"', '-c', 'sandbox_mode="read-only"', '-c', 'cli_auth_credentials_store="file"', '-c', 'forced_login_method="chatgpt"']
     proc = subprocess.Popen(cmd, cwd=private/'Workspace', env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         for ident, method, params in [(1, 'initialize', {'clientInfo': {'name': 'StudyPilotSecurityProbe', 'version': '1.0'}}), (2, 'account/read', {}), (3, 'account/login/start', {'type': 'chatgpt'})]:

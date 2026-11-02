@@ -61,7 +61,7 @@ connect.
   path. The host checks the verified account, connection, thread, turn, grant and
   original content again when approval is applied. Approval expires after two
   minutes and can be consumed once. Changed files invalidate older proposals.
-- Shell execution, built-in file modification, permission expansion, MCP servers
+- Shell execution, built-in file modification, permission expansion, connected apps, plugins, MCP servers
   and network tools stay unavailable. The app-server's shell tool is disabled,
   its process is sandboxed, and unknown server requests are rejected. Study tools
   execute bounded local app functions; they do not interpret shell commands.
@@ -143,7 +143,7 @@ and extended ACLs that could bypass owner-only mode.
 
 ## Additional validation for 1.26.0
 
-The full suite contains 124 tests. Study-tool tests cover two synthetic account
+The full suite contains 125 tests. Study-tool tests cover two synthetic account
 identities, guesses of other users' file IDs, wrong conversation and turn IDs,
 unchecked files, traversal, symlink escapes, rejected edits, changed-file
 conflicts, expired/replayed approvals, turn-end/disconnect revocation, bounded
@@ -158,3 +158,5 @@ no model turn. Live authenticated responses and two different live accounts
 remain unverified; the owner currently has only one test account. This limitation
 is explicit and is not replaced by a claim that the full end-to-end account
 isolation suite has passed.
+
+Version 1.26.1 explicitly disables Codex apps, plugins, unified execution and code-mode hosts at launch; these integrations are not inherited from Codex defaults. StudyPilot also reads back the effective configuration and refuses to connect unless every restriction is confirmed. Only the registered, reviewed study tools are intended for this extension.

@@ -1,5 +1,9 @@
 # In-app updates
 
+## Explicit Codex integration restrictions (1.26.1)
+
+Codex connected apps, plugins, unified command execution and code-mode hosts are explicitly disabled. This prevents its default integrations from expanding the study extension’s access. The reviewed study tools introduced in 1.26.0 remain available.
+
 ## Reviewed Codex study tools (1.26.0)
 
 Share copies of text files with an individual Codex conversation. Reading a shared file, counting words, finding passages and changing its contents each require approval. File edits show the complete before/after text and affect only the shared copy; Save copy exports to a location the student chooses. Approvals are bound to one account, conversation and turn, expire after two minutes, and cannot be replayed. Unchecked files are unavailable to tools. Shell commands, arbitrary file paths and network tools remain blocked. Sessions lock after 30 minutes idle; switching off Codex discards shared-file copies and pending permissions.

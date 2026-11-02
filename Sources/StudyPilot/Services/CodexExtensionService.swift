@@ -102,6 +102,11 @@ struct CodexModelOption: Identifiable, Equatable {
                                "-p", CodexSecurityPolicy.sandboxProfile, binary.path,
                                "app-server", "--stdio", "--strict-config",
                                "-c", "features.shell_tool=false",
+                               "-c", "features.unified_exec=false",
+                               "-c", "features.apps=false",
+                               "-c", "features.plugins=false",
+                               "-c", "features.code_mode=false",
+                               "-c", "features.code_mode_host=false",
                                "-c", "features.apply_patch_freeform=false",
                                "-c", "web_search=\"disabled\"",
                                "-c", "sandbox_mode=\"read-only\"",
@@ -138,6 +143,11 @@ struct CodexModelOption: Identifiable, Equatable {
             }
             _ = try await request("initialize", ["clientInfo": ["name": "StudyPilot", "version": "1.0"], "capabilities": ["experimentalApi": true]])
             try notify("initialized", [:])
+            let configuration = try await request("config/read", ["includeLayers": false])
+            guard let effective = configuration["config"] as? [String: Any],
+                  CodexSecurityPolicy.permitsStudyOnlyConfiguration(effective) else {
+                throw ExtensionError.server("Codex could not confirm StudyPilot's privacy restrictions. Update the official Codex CLI and reconnect.")
+            }
             try await refreshAccount()
             try? await refreshModels()
             if connected { try await refreshHistory() }

@@ -52,7 +52,7 @@ New in **1.23.1**: completed focus time earns food tickets. Each 25 minutes gran
 
 Companion features: the companion reacts when you feed, play, or rest. Choose from three snacks for one ticket each, and watch its appearance change as it grows from Hatchling to Explorer to Study buddy.
 
-New in **1.26.0**, macOS includes an **optional local Codex preview** in Settings. It connects through the official Codex app-server with your own ChatGPT sign-in and can chat about notes you explicitly select. Choose an available model, continue saved conversations, and keep each student’s connection under their own macOS login. The Codex process runs inside a restricted macOS sandbox. Share text-file copies, review each study tool request, and approve or reject proposed edits before saving a reviewed copy. Shell commands and access to other files are blocked. See [setup and limitations](CODEX-EXTENSION.md); this is not a remote multi-user service or a Windows feature.
+New in **1.26.1**, macOS includes an **optional local Codex preview** in Settings. It connects through the official Codex app-server with your own ChatGPT sign-in and can chat about notes you explicitly select. Choose an available model, continue saved conversations, and keep each student’s connection under their own macOS login. The Codex process runs inside a restricted macOS sandbox. Share text-file copies, review each study tool request, and approve or reject proposed edits before saving a reviewed copy. Connected-app/plugin integrations, shell commands and access to other files are blocked. See [setup and limitations](CODEX-EXTENSION.md); this is not a remote multi-user service or a Windows feature.
 
 <table>
   <tr>

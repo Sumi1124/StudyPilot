@@ -13,7 +13,7 @@ processes = []
 
 def launch(home):
     for name in ['CodexHome', 'Workspace', 'Temporary']: (home/name).mkdir(parents=True, mode=0o700)
-    cmd = ['/usr/bin/sandbox-exec', '-DROOT='+str(home), '-DEXECUTABLE='+binary, '-DBINARY_DIRECTORY='+str(Path(binary).parent), '-p', profile, binary, 'app-server', '--stdio', '--strict-config', '-c', 'features.shell_tool=false', '-c', 'features.apply_patch_freeform=false', '-c', 'web_search="disabled"', '-c', 'sandbox_mode="read-only"', '-c', 'cli_auth_credentials_store="file"', '-c', 'forced_login_method="chatgpt"']
+    cmd = ['/usr/bin/sandbox-exec', '-DROOT='+str(home), '-DEXECUTABLE='+binary, '-DBINARY_DIRECTORY='+str(Path(binary).parent), '-p', profile, binary, 'app-server', '--stdio', '--strict-config', '-c', 'features.shell_tool=false', '-c', 'features.unified_exec=false', '-c', 'features.apps=false', '-c', 'features.plugins=false', '-c', 'features.code_mode=false', '-c', 'features.code_mode_host=false', '-c', 'features.apply_patch_freeform=false', '-c', 'web_search="disabled"', '-c', 'sandbox_mode="read-only"', '-c', 'cli_auth_credentials_store="file"', '-c', 'forced_login_method="chatgpt"']
     env = {'HOME': str(home), 'CODEX_HOME': str(home/'CodexHome'), 'TMPDIR': str(home/'Temporary'), 'PATH': '/usr/bin:/bin', 'LANG': 'en_US.UTF-8'}
     p = subprocess.Popen(cmd, cwd=home/'Workspace', env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
     processes.append(p)
@@ -51,6 +51,10 @@ with tempfile.TemporaryDirectory(prefix='studypilot-protocol-') as tmp:
             rpc(peer, 'initialize', {'clientInfo': {'name': 'StudyPilotSecurityProbe', 'version': '1.0'}, 'capabilities': {'experimentalApi': True}})
             peer.stdin.write(b'{"method":"initialized","params":{}}\n')
             assert rpc(peer, 'account/read', {})['account'] is None
+            config = rpc(peer, 'config/read', {'includeLayers': False})['config']
+            assert all(config['features'].get(key) is False for key in ['apps', 'plugins', 'shell_tool', 'unified_exec', 'code_mode', 'code_mode_host', 'apply_patch_freeform'])
+            assert config['web_search'] == 'disabled'
+            print('PASS: effective configuration disables apps, plugins, commands and web search', flush=True)
         print('PASS: two simultaneous processes have fresh, separate signed-out accounts', flush=True)
         tool = {'type': 'function', 'name': 'study_count_words', 'description': 'Count words only after student approval.', 'inputSchema': {'type': 'object', 'properties': {'file_id': {'type': 'string'}}, 'required': ['file_id'], 'additionalProperties': False}}
         threads = []

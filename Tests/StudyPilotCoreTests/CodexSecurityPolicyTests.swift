@@ -50,3 +50,17 @@ import Testing
     #expect(!FileManager.default.fileExists(atPath: alice.root.path))
     #expect(bob.matchesConnection(email: "bob@example.com", workspaceName: nil))
 }
+
+@Test func codexRefusesUnconfirmedOrExpandedEffectiveConfiguration() {
+    let disabled = ["apps", "plugins", "shell_tool", "unified_exec", "code_mode", "code_mode_host", "apply_patch_freeform"]
+    let features = Dictionary(uniqueKeysWithValues: disabled.map { ($0, false) })
+    #expect(CodexSecurityPolicy.permitsStudyOnlyConfiguration(["features": features, "web_search": "disabled"]))
+    for name in disabled {
+        var enabled = features; enabled[name] = true
+        #expect(!CodexSecurityPolicy.permitsStudyOnlyConfiguration(["features": enabled, "web_search": "disabled"]))
+        var missing = features; missing.removeValue(forKey: name)
+        #expect(!CodexSecurityPolicy.permitsStudyOnlyConfiguration(["features": missing, "web_search": "disabled"]))
+    }
+    #expect(!CodexSecurityPolicy.permitsStudyOnlyConfiguration(["features": features, "web_search": "live"]))
+    #expect(!CodexSecurityPolicy.permitsStudyOnlyConfiguration([:]))
+}
