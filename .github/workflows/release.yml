@@ -11,6 +11,8 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v5
+      - name: Run tests
+        run: bash Scripts/test.sh
       - name: Build Apple Silicon app
         run: bash Scripts/build-app.sh
       - name: Package and publish

@@ -25,7 +25,6 @@
   <img alt="Windows 10 or 11" src="https://img.shields.io/badge/Windows-10%2F11-1D2522?style=flat-square&logo=windows11&logoColor=white">
   <img alt="Apple Silicon" src="https://img.shields.io/badge/Apple_Silicon-arm64-1D2522?style=flat-square">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?style=flat-square&logo=swift&logoColor=white">
-  <img alt="108 tests passing" src="https://img.shields.io/badge/tests-108_passing-3D8068?style=flat-square">
   <img alt="Core features work offline" src="https://img.shields.io/badge/core_features-offline-3D8068?style=flat-square">
 </p>
 
@@ -36,6 +35,8 @@
 ## One place for the whole school week
 
 StudyPilot combines the work students usually split across a task manager, calendar, notebook, flashcard app, and timer. Both editions are native desktop apps, store their workspace locally, and do not require an account for their core features. The mature macOS edition has the complete feature set; the new Windows edition begins with assignments, study planning, notes, focus, and backups.
+
+On a shared Mac, give each student a separate macOS login. The macOS edition keeps each login's StudyPilot workspace and optional Codex connection in that user's private Application Support directory. Settings shows the current Mac login.
 
 New on macOS in **1.20.0**: download the optional Qwen 3.5 0.8B model inside StudyPilot, even when the local service is stopped or Ollama is missing. StudyPilot fetches a checksum-verified engine into its own Application Support folder when needed and continues the model download without opening a website. IB MYP and DP workspace modes remain available in Settings.
 
@@ -49,7 +50,9 @@ New in **1.23.0**: an optional study companion lives in Focus, grows with comple
 
 New in **1.23.1**: completed focus time earns food tickets. Each 25 minutes grants one ticket, and feeding the companion costs one. The companion shows your balance and progress toward the next ticket.
 
-New in **1.24.0**: the companion reacts when you feed, play, or rest. Choose from three snacks for one ticket each, and watch its appearance change as it grows from Hatchling to Explorer to Study buddy.
+Companion features: the companion reacts when you feed, play, or rest. Choose from three snacks for one ticket each, and watch its appearance change as it grows from Hatchling to Explorer to Study buddy.
+
+New in **1.25.0**, macOS includes an **optional local Codex preview** in Settings. It connects through the official Codex app-server with your own ChatGPT sign-in and can chat about notes you explicitly select. Choose an available model, continue saved conversations, and keep each student’s connection under their own macOS login. The Codex process runs inside a restricted macOS sandbox; tools and file changes are denied. See [setup and limitations](CODEX-EXTENSION.md); this is not a remote multi-user service or a Windows feature.
 
 <table>
   <tr>

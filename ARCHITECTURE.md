@@ -6,6 +6,18 @@
 - **StudyPilotData**: eleven concrete SwiftData `PersistentModel` classes; schema/container creation; subject presets; complete snapshots and ID-based restoration. SQLite persistence remains Apple's SwiftData implementation, explicitly configured without CloudKit.
 - **StudyPilot**: SwiftUI features, application navigation, native search palette, backup panels, reminder service, and focus controller. UI and model mutations run on the main actor.
 
+## Local account boundary
+
+StudyPilot uses the current macOS login as its local user identity. The default
+SwiftData store is in that login's Application Support directory. Startup makes
+the StudyPilot workspace directory owner-only (`0700`) and refuses symbolic
+links or directories owned by another Unix user. Each app build and macOS UID
+also gets a separate Codex home and workspace. The optional Codex connection
+requires explicit in-app ChatGPT sign-in and stores a private identity receipt;
+account changes clear the prior Codex history. Separate StudyPilot accounts
+inside one shared macOS login are unsupported. The app does not host a network
+service for remote users.
+
 ## Models and observation
 
 Models are generated from `Scripts/generate-models.py`, which produces both public value records and the SwiftData implementations. Complex checklist and tag arrays are JSON-encoded in Data properties; all other values are native scalar attributes. UUIDs are unique identifiers. Cross-record references use UUIDs rather than relationships, keeping the export schema explicit and restorable.

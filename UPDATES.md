@@ -1,5 +1,9 @@
 # In-app updates
 
+## Private Codex extension (1.25.0)
+
+Optional Codex chat now appears in the sidebar with individual ChatGPT sign-in, a model selector, streamed replies, saved conversations, and explicit note selection. Each student uses a separate macOS login. The Codex process is confined to its own data folder by a macOS sandbox; commands, file edits, and permission expansion remain disabled. Account changes invalidate the old session, logout waits for process exit before deleting local data, and private workspace ownership and sharing permissions are checked at startup. See [Codex setup and limitations](CODEX-EXTENSION.md).
+
 ## A livelier study companion (1.24.0)
 
 The optional companion now reacts briefly to food, play, and rest. Choose an apple, onigiri, or toast for one study ticket each. Its appearance changes at Explorer and Study buddy milestones, while its growth and ticket balance continue to come from recorded focus sessions. Care actions stay in the Focus screen and remain optional.

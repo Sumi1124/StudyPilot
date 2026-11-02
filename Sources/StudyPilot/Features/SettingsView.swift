@@ -10,12 +10,14 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var app
     @Environment(FocusController.self) private var focus
+    @Environment(CodexExtensionService.self) private var codex
     @AppStorage("displayName") private var displayName = ""
     @AppStorage("appearance") private var appearance = "System"
     @AppStorage("remindersEnabled") private var remindersEnabled = false
     @AppStorage("ibProgramme") private var ibProgramme = "General"
     @AppStorage("companionEnabled") private var companionEnabled = false
     @AppStorage("companionName") private var companionName = "Mochi"
+    @AppStorage("codexExtensionEnabled") private var codexExtensionEnabled = false
     @ObservedObject private var updater = AppUpdater.shared
     @State private var backups: [URL] = []
     @State private var candidate: BackupEnvelope?
@@ -38,7 +40,12 @@ struct SettingsView: View {
                         dismiss()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { app.showingFirstRunSetup = true }
                     }
-                    Text("No account. No subscriptions. Your work stays on this Mac.").font(.caption).foregroundStyle(.secondary)
+                    Text("No separate StudyPilot account or subscription. Your workspace stays under this Mac login.").font(.caption).foregroundStyle(.secondary)
+                }
+                Section("Mac account") {
+                    LabeledContent("Current login", value: NSUserName())
+                    Text("Each macOS login has its own StudyPilot workspace, Codex account connection, and conversation history. Switch students at the Mac login screen; sharing one macOS login shares this workspace.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Appearance") {
                     Picker("Mode", selection: $appearance) {
@@ -68,6 +75,15 @@ struct SettingsView: View {
                     if focus.state != nil { Text("Finish the active focus session before updating.").font(.caption).foregroundStyle(.secondary) }
                 }
                 Section("AI model") { AIModelSettings() }
+                Section("Codex extension · local preview") {
+                    Toggle("Enable Codex", isOn: $codexExtensionEnabled)
+                    Text("Use your own ChatGPT account in the Codex section. This preview runs the official Codex app-server on this Mac, keeps its account and history in a private folder for your macOS user, and denies all tool and file-change requests. Messages and notes you check are sent to OpenAI.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    if codexExtensionEnabled {
+                        Button("Open Codex") { dismiss(); app.section = .codex }
+                        if codex.connected { Button("Disconnect and erase Codex data", role: .destructive) { Task { await codex.disconnect() } } }
+                    }
+                }
                 Section("Reminders") {
                     Toggle("Enable local reminders", isOn: Binding(get: { remindersEnabled }, set: { enabled in
                         if enabled { Task { await ReminderService.shared.requestPermission(context: context) } }

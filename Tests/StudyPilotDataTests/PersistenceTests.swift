@@ -7,9 +7,10 @@ import StudyPilotCore
 @Test @MainActor func notebookSourceCopiesAndCitedNotesSurvivePortableBackup() throws {
     let container = try DataStore.makeContainer(inMemory: true), context = container.mainContext
     let notebook = NotebookRecord(title: "Source notebook")
-    let original = NoteRecord(title: "Class notes", body: "Original class material")
-    let source = NoteRecord(title: original.title, body: original.body, notebookID: notebook.id, tags: [NotebookResearch.sourceTag])
-    let answer = NoteRecord(title: "Saved question", body: "Explanation\n\nOriginal class material", notebookID: notebook.id, tags: [NotebookResearch.answerTag])
+    let recordedAt = Date(timeIntervalSince1970: 1_700_000_000)
+    let original = NoteRecord(title: "Class notes", body: "Original class material", createdAt: recordedAt, updatedAt: recordedAt)
+    let source = NoteRecord(title: original.title, body: original.body, notebookID: notebook.id, tags: [NotebookResearch.sourceTag], createdAt: recordedAt, updatedAt: recordedAt)
+    let answer = NoteRecord(title: "Saved question", body: "Explanation\n\nOriginal class material", notebookID: notebook.id, tags: [NotebookResearch.answerTag], createdAt: recordedAt, updatedAt: recordedAt)
     context.insert(Notebook(notebook)); for record in [original, source, answer] { context.insert(Note(record)) }; try context.save()
     let portable = try BackupCodec.decode(BackupCodec.encode(BackupStore.snapshot(context)))
     let restored = try DataStore.makeContainer(inMemory: true)

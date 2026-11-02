@@ -9,7 +9,8 @@ private func effortJSON(low: Int = 25, likely: Int = 45, high: Int = 75, reason:
     let value = try EffortEstimate.decode(effortJSON(low: 6, likely: 31, high: 61))
     #expect(value.minimumMinutes == 10); #expect(value.minutes == 35); #expect(value.maximumMinutes == 65)
     #expect(try EffortEstimate.decode(effortJSON(low: 5, likely: 1440, high: 1440)).minutes == 1440)
-    for values in [(0,30,60), (30,20,60), (20,60,50), (10,30,1441), (-1,0,5)] {
+    #expect(try EffortEstimate.decode(effortJSON(low: 180, likely: 200, high: 240)).minutes == 200)
+    for values in [(0,30,60), (30,20,60), (20,60,50), (10,30,100_001), (-1,0,5)] {
         #expect(throws: (any Error).self) { try EffortEstimate.decode(effortJSON(low: values.0, likely: values.1, high: values.2)) }
     }
 }

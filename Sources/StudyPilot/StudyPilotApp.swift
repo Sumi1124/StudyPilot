@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import StudyPilotCore
 import StudyPilotData
 
 @main struct StudyPilotApp: App {
@@ -8,6 +9,7 @@ import StudyPilotData
     @State private var focus = FocusController()
     @State private var planning = CalendarPlanningService()
     @State private var chat = StudyChatService()
+    @State private var codex = CodexExtensionService()
     private let container: ModelContainer?
     private let startupError: String?
     init() {
@@ -20,7 +22,7 @@ import StudyPilotData
             } else {
                 folder = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("StudyPilot", isDirectory: true)
             }
-            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try LocalAccountStorage.prepare(folder)
             let store = try DataStore.makeContainer(at: folder.appendingPathComponent("StudyPilot.store"))
             try DataStore.seedSubjectsIfNeeded(store.mainContext)
             container = store; startupError = nil
@@ -29,7 +31,7 @@ import StudyPilotData
     var body: some Scene {
         Window("StudyPilot", id: "main") {
             if let container {
-                RootView().environment(app).environment(focus).environment(planning).environment(chat).modelContainer(container)
+                RootView().environment(app).environment(focus).environment(planning).environment(chat).environment(codex).modelContainer(container)
             } else {
                 VStack(spacing: 18) {
                     Image(systemName: "externaldrive.badge.exclamationmark").font(.largeTitle)
@@ -67,6 +69,7 @@ struct RootView: View {
     @LiveQuery(sort: \Notebook.title) private var notebooks: [Notebook]
     @LiveQuery private var assignments: [Assignment]
     @Environment(StudyChatService.self) private var chat
+    @Environment(CodexExtensionService.self) private var codex
     @Environment(CalendarPlanningService.self) private var planning
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
@@ -81,6 +84,7 @@ struct RootView: View {
     @AppStorage("customAccentHex") private var customAccentHex = "355F9C"
     @AppStorage("completedFirstRunSetupV1") private var completedFirstRunSetup = false
     @AppStorage("companionEnabled") private var companionEnabled = false
+    @AppStorage("codexExtensionEnabled") private var codexExtensionEnabled = false
     private func sidebarRow(_ section: AppSection) -> some View {
         HStack {
             Label { Text(section.rawValue).font(.system(size: 13, weight: app.section == section ? .medium : .regular)) } icon: { Image(systemName: section.symbol).font(.system(size: 14)).foregroundStyle(app.section == section ? Color.notebookInk : .secondary) }
@@ -117,6 +121,7 @@ struct RootView: View {
                         }
                     }
                     Section("Study") { ForEach([AppSection.notes, .revision, .focus, .chat]) { sidebarRow($0) } }
+                    if codexExtensionEnabled { Section("Extensions") { sidebarRow(.codex) } }
                     if companionEnabled { Button { app.section = .focus } label: { Label("Visit study companion", systemImage: "face.smiling").font(.system(size: 12)).foregroundStyle(Color.pilot) }.buttonStyle(.plain).padding(.horizontal, 18).padding(.vertical, 7) }
                     Section("Organize") { ForEach([AppSection.progress, .library]) { sidebarRow($0) } }
                 }.listStyle(.sidebar).environment(\.defaultMinListRowHeight, 30).scrollContentBackground(.hidden)
@@ -151,6 +156,7 @@ struct RootView: View {
                 case .progress: AcademicProgressView()
                 case .chat: StudyChatView()
                 case .notebooks: NotebooksView()
+                case .codex: CodexExtensionView()
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity).background { PilotBackdrop() }
                 .toolbar {
@@ -226,6 +232,7 @@ struct RootView: View {
             }
             .onChange(of: scenePhase) { if scenePhase == .active { if !updater.isBusy && !app.showingStudyPlanner { planning.removeFinishedTaskSessions(context: context, force: true); planning.checkUnfinished(context: context, force: true) }; focus.tick(context: context); Task { await ReminderService.shared.reconcile(context: context); await updater.refreshAvailability() } } }
             .onChange(of: focus.error) { if let error = focus.error { app.error = error; focus.error = nil } }
+            .onChange(of: codexExtensionEnabled) { if !codexExtensionEnabled { codex.stop(); if app.section == .codex { app.section = .dashboard } } }
             .preferredColorScheme(appearance == "Light" ? .light : appearance == "Dark" ? .dark : nil)
             .tint(AppAccent.color(name: accentColor, customHex: customAccentHex))
     }

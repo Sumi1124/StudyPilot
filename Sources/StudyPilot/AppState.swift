@@ -4,7 +4,7 @@ import StudyPilotCore
 import StudyPilotData
 
 public enum AppSection: String, CaseIterable, Identifiable {
-    case dashboard = "Today", assignments = "Assignments", calendar = "Calendar", notes = "Notes", revision = "Revision", focus = "Focus", progress = "Progress", library = "Subjects & projects", chat = "AI Chat", notebooks = "Notebooks"
+    case dashboard = "Today", assignments = "Assignments", calendar = "Calendar", notes = "Notes", revision = "Revision", focus = "Focus", progress = "Progress", library = "Subjects & projects", chat = "AI Chat", notebooks = "Notebooks", codex = "Codex"
     public var id: String { rawValue }
     var symbol: String {
         switch self {
@@ -18,6 +18,7 @@ public enum AppSection: String, CaseIterable, Identifiable {
         case .library: "books.vertical"
         case .chat: "bubble.left.and.bubble.right"
         case .notebooks: "books.vertical"
+        case .codex: "chevron.left.forwardslash.chevron.right"
         }
     }
 }
