@@ -25,7 +25,14 @@ not switch users.
    when a turn starts. Existing conversations retain their model.
 5. Start a conversation. Check a note only when you want its text included in
    the next message. Unchecked notes and other StudyPilot data are not attached.
-6. **Disconnect and erase Codex data** calls `account/logout`, ends the process,
+6. Use **Shared files → Choose text files**, then check the copies to share in a
+   message. Files are UTF-8 text, up to 64 KB each, with at most 12 copies per
+   connection. New conversations register the study tools. Review each read,
+   word count, passage search or proposed edit, then approve once or reject.
+   Edits update only the shared copy. **Save copy** exports to a chosen location.
+   Removing a copy or disconnecting prevents future tool access; material already
+   sent remains in that conversation.
+7. **Disconnect and erase Codex data** calls `account/logout`, ends the process,
    and removes this macOS user's dedicated Codex home, workspace, and local
    conversation history. Disabling the extension stops the process but keeps the
    account and history so it can reconnect later.
@@ -48,11 +55,23 @@ connect.
 - This is **one StudyPilot identity per macOS account**. It does not provide
   multiple signed-in StudyPilot accounts within one macOS account. Do not use a
   shared macOS account as a multi-user installation.
-- Tool execution and file modifications are disabled for this preview: the
-  app-server starts with its shell tool off and a read-only sandbox, and
-  StudyPilot declines every server-initiated approval request. The UI cannot
-  approve proposed changes yet. Only selected note text is supplied as prompt
-  content; the extension does not grant file paths to the model.
+- Four host-managed study tools are available: read a checked file, count its
+  words, find literal passages and propose a replacement. Every operation requires
+  explicit approval. The model supplies an opaque file ID, never a filesystem
+  path. The host checks the verified account, connection, thread, turn, grant and
+  original content again when approval is applied. Approval expires after two
+  minutes and can be consumed once. Changed files invalidate older proposals.
+- Shell execution, built-in file modification, permission expansion, MCP servers
+  and network tools stay unavailable. The app-server's shell tool is disabled,
+  its process is sandboxed, and unknown server requests are rejected. Study tools
+  execute bounded local app functions; they do not interpret shell commands.
+- Shared text files are private copies in a fresh session directory. Originals
+  are not modified by Codex. Only the student's explicit Save copy action can
+  write the reviewed content to a chosen destination. The tool API cannot choose
+  that destination or trigger export. Pending permissions and copies are revoked
+  on disconnect, disable, process restart or 30-minute idle lock. Each turn is
+  limited to 20 calls with at most four pending approvals. Per-connection approval
+  and rejection totals stay local.
 - The app-server itself runs under a macOS Seatbelt policy that permits its
   dedicated account directory, system runtime files, the Codex binary directory,
   HTTPS service traffic and the localhost sign-in callback. Other personal file
@@ -121,3 +140,21 @@ size, and stops responses after three minutes. Disconnect blocks new requests,
 waits for process exit, erases only that account's dedicated directory, and
 reports cleanup failures. File storage checks reject symlinks, incorrect owners
 and extended ACLs that could bypass owner-only mode.
+
+## Additional validation for 1.26.0
+
+The full suite contains 124 tests. Study-tool tests cover two synthetic account
+identities, guesses of other users' file IDs, wrong conversation and turn IDs,
+unchecked files, traversal, symlink escapes, rejected edits, changed-file
+conflicts, expired/replayed approvals, turn-end/disconnect revocation, bounded
+inputs and actual tool results. These tests exercise the same authorization and
+mutation code used by the app.
+
+`python3 Scripts/test-codex-protocol.py` starts two actual app-server processes
+simultaneously with empty, separate homes. Both report signed out, register an
+official dynamic tool, create distinct conversations, reject the other process's
+conversation ID, and complete logout. It uses no existing credentials and makes
+no model turn. Live authenticated responses and two different live accounts
+remain unverified; the owner currently has only one test account. This limitation
+is explicit and is not replaced by a claim that the full end-to-end account
+isolation suite has passed.

@@ -1,5 +1,9 @@
 # In-app updates
 
+## Reviewed Codex study tools (1.26.0)
+
+Share copies of text files with an individual Codex conversation. Reading a shared file, counting words, finding passages and changing its contents each require approval. File edits show the complete before/after text and affect only the shared copy; Save copy exports to a location the student chooses. Approvals are bound to one account, conversation and turn, expire after two minutes, and cannot be replayed. Unchecked files are unavailable to tools. Shell commands, arbitrary file paths and network tools remain blocked. Sessions lock after 30 minutes idle; switching off Codex discards shared-file copies and pending permissions.
+
 ## Private Codex extension (1.25.0)
 
 Optional Codex chat now appears in the sidebar with individual ChatGPT sign-in, a model selector, streamed replies, saved conversations, and explicit note selection. Each student uses a separate macOS login. The Codex process is confined to its own data folder by a macOS sandbox; commands, file edits, and permission expansion remain disabled. Account changes invalidate the old session, logout waits for process exit before deleting local data, and private workspace ownership and sharing permissions are checked at startup. See [Codex setup and limitations](CODEX-EXTENSION.md).

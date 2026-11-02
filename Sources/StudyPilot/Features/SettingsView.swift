@@ -77,7 +77,7 @@ struct SettingsView: View {
                 Section("AI model") { AIModelSettings() }
                 Section("Codex extension · local preview") {
                     Toggle("Enable Codex", isOn: $codexExtensionEnabled)
-                    Text("Use your own ChatGPT account in the Codex section. This preview runs the official Codex app-server on this Mac, keeps its account and history in a private folder for your macOS user, and denies all tool and file-change requests. Messages and notes you check are sent to OpenAI.")
+                    Text("Use your own ChatGPT account in the Codex section. This preview runs the official Codex app-server on this Mac, keeps its account and history in a private folder for your macOS user, and requires approval for its study tools and shared-copy edits. Shell commands and access to other files stay blocked. Messages, checked notes and approved tool results are sent to OpenAI.")
                         .font(.caption).foregroundStyle(.secondary)
                     if codexExtensionEnabled {
                         Button("Open Codex") { dismiss(); app.section = .codex }
