@@ -107,7 +107,7 @@ import FoundationModels
                 threads[index].messages.append(.init(role: "assistant", text: answer.text, sources: answer.sources, answerKind: "workspace", factScope: factRequest.scope))
                 try save(); contextStatus = "Answered directly from saved workspace data"; return true
             }
-            let query = StudyUnderstanding.query(messages: threads[index].messages)
+            let query = StudyUnderstanding.query(messages: models.choice == .codex ? CodexAIRequest.currentMessage(in: threads[index].messages) : threads[index].messages)
             let learning = StudyUnderstanding.isLearningQuestion(cleaned)
             let snapshot = learning ? nil : try calendar.snapshot(query: query)
             let study = useStudyContext && StudyUnderstanding.needsSavedStudyContext(cleaned) ? try calendar.studyBundle(query: query) : nil
@@ -131,7 +131,7 @@ import FoundationModels
                 }
                 return
             }
-            let query = StudyUnderstanding.query(messages: thread.messages)
+            let query = StudyUnderstanding.query(messages: models.choice == .codex ? CodexAIRequest.currentMessage(in: thread.messages) : thread.messages)
             let text = thread.messages.last?.text ?? ""
             let learning = StudyUnderstanding.isLearningQuestion(text)
             let snapshot = learning ? nil : try calendar.snapshot(query: query)
@@ -166,7 +166,7 @@ import FoundationModels
             defer { if requestID == id { generating = false; requestID = nil; request = nil } }
             do {
                 let messages = threads.first { $0.id == threadID }?.messages ?? []
-                let wantsMove = StudyUnderstanding.requestsMove(messages: messages)
+                let wantsMove = StudyUnderstanding.requestsMove(messages: models.choice == .codex ? CodexAIRequest.currentMessage(in: messages) : messages)
                 let eventIDs = snapshot.map { wantsMove ? Array($0.aliases.keys) : [] }
                 let result: CalendarChatResponse
                 if models.choice == .codex {

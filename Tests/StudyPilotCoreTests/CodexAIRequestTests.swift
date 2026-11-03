@@ -28,3 +28,12 @@ import Testing
     }
     #expect(try CodexAIRequest.chatReply(#"{"reply":"Hello","eventID":"none","start":""}"#, eventIDs: nil).move == nil)
 }
+
+@Test func codexProviderDoesNotInferContextOrMoveIntentFromEarlierChats() {
+    let messages = [StudyChatMessage(role: "user", text: "Move my private chemistry event"),
+                    StudyChatMessage(role: "assistant", text: "PRIVATE SAVED DETAILS"),
+                    StudyChatMessage(role: "user", text: "Tomorrow instead")]
+    let current = CodexAIRequest.currentMessage(in: messages)
+    #expect(StudyUnderstanding.query(messages: current) == "Tomorrow instead\n")
+    #expect(!StudyUnderstanding.requestsMove(messages: current))
+}

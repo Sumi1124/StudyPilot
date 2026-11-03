@@ -161,7 +161,7 @@ isolation suite has passed.
 
 Version 1.26.1 explicitly disables Codex apps, plugins, unified execution and code-mode hosts at launch; these integrations are not inherited from Codex defaults. StudyPilot also reads back the effective configuration and refuses to connect unless every restriction is confirmed. Only the registered, reviewed study tools are intended for this extension.
 
-## Alternative AI provider (1.27.0)
+## Alternative AI provider (1.27.1)
 
 Settings → AI model now offers **Codex · ChatGPT** alongside Apple Intelligence
 and optional Qwen. Connect your own account and choose an available Codex model
