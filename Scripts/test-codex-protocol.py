@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Exercise two isolated real app-servers without signing into either account."""
 from pathlib import Path
-import json, os, select, subprocess, tempfile, time
+import json, os, select, subprocess, tempfile, time, sys
 
 root = Path(__file__).resolve().parents[1]
 source = (root / 'Sources/StudyPilotCore/CodexSecurityPolicy.swift').read_text()
@@ -14,7 +14,7 @@ processes = []
 def launch(home):
     for name in ['CodexHome', 'Workspace', 'Temporary']: (home/name).mkdir(parents=True, mode=0o700)
     cmd = ['/usr/bin/sandbox-exec', '-DROOT='+str(home), '-DEXECUTABLE='+binary, '-DBINARY_DIRECTORY='+str(Path(binary).parent), '-p', profile, binary, 'app-server', '--stdio', '--strict-config', '-c', 'memories.use_memories=false', '-c', 'memories.generate_memories=false', '-c', 'features.shell_tool=false', '-c', 'features.unified_exec=false', '-c', 'features.apps=false', '-c', 'features.plugins=false', '-c', 'features.code_mode=false', '-c', 'features.code_mode_host=false', '-c', 'features.apply_patch_freeform=false', '-c', 'web_search="disabled"', '-c', 'sandbox_mode="read-only"', '-c', 'cli_auth_credentials_store="file"', '-c', 'forced_login_method="chatgpt"']
-    env = {'HOME': str(home), 'CODEX_HOME': str(home/'CodexHome'), 'TMPDIR': str(home/'Temporary'), 'PATH': '/usr/bin:/bin', 'LANG': 'en_US.UTF-8'}
+    env = {'HOME': str(home), 'CODEX_HOME': str(home/'CodexHome'), 'TMPDIR': str(home/'Temporary'), 'PATH': '/usr/bin:/bin', 'LANG': 'en_US.UTF-8', 'CODEX_CA_CERTIFICATE': '/private/etc/ssl/cert.pem'}
     p = subprocess.Popen(cmd, cwd=home/'Workspace', env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
     processes.append(p)
     return p
@@ -58,6 +58,14 @@ with tempfile.TemporaryDirectory(prefix='studypilot-protocol-') as tmp:
             assert config['memories']['generate_memories'] is False
             print('PASS: effective configuration disables apps, plugins, commands and web search', flush=True)
         print('PASS: two simultaneous processes have fresh, separate signed-out accounts', flush=True)
+        if '--network' in sys.argv:
+            # Exercise the real HTTPS auth client, never a user's account or token.
+            # Starting browser login alone does not make an outbound token request.
+            device = rpc(peers[0], 'account/login/start', {'type': 'chatgptDeviceCode'})
+            assert device.get('loginId') and device.get('type') == 'chatgptDeviceCode'
+            rpc(peers[0], 'account/login/cancel', {'loginId': device['loginId']})
+            assert rpc(peers[0], 'account/read', {})['account'] is None
+            print('PASS: sandboxed OpenAI HTTPS auth endpoint reachable with TLS verification; temporary login cancelled', flush=True)
         tool = {'type': 'function', 'name': 'study_count_words', 'description': 'Count words only after student approval.', 'inputSchema': {'type': 'object', 'properties': {'file_id': {'type': 'string'}}, 'required': ['file_id'], 'additionalProperties': False}}
         threads = []
         for peer, home in zip(peers, homes):

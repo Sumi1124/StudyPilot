@@ -1,5 +1,11 @@
 # In-app updates
 
+## Codex sign-in connection fix (1.27.2)
+
+- Fixes network restrictions that prevented hostname lookup and certificate initialization during Codex sign-in.
+- Allows only the macOS DNS service socket paths and supplies the system's public certificate bundle to Codex. HTTPS certificate verification remains enabled; personal-file, command and memory restrictions remain in place.
+- Adds an optional live connectivity regression check using a fresh, signed-out Codex process. It requests and cancels a temporary device login without signing in or printing codes.
+
 ## Codex as an alternative AI provider (1.27.1)
 
 - Choose Codex alongside Apple Intelligence and optional Qwen in Settings → AI model.

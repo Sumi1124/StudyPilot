@@ -48,7 +48,11 @@ public enum CodexSecurityPolicy {
         (literal "/dev/random") (literal "/dev/urandom"))
     (allow file-read* file-write* file-lock (subpath (param "ROOT")))
     (allow file-read* file-write-data (literal "/dev/null"))
-    (allow network-outbound (remote tcp "*:443"))
+    ; macOS DNS uses both public and canonical names for its Unix socket.
+    (allow network-outbound
+        (literal "/var/run/mDNSResponder")
+        (literal "/private/var/run/mDNSResponder")
+        (remote tcp "*:443"))
     (allow network-bind (local tcp "localhost:1455"))
     (allow network-inbound (local tcp "localhost:1455"))
     """

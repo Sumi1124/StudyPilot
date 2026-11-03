@@ -123,7 +123,9 @@ struct CodexModelOption: Identifiable, Equatable {
             child.currentDirectoryURL = scope.workspace
             child.environment = ["HOME": scope.root.path, "CODEX_HOME": scope.codexHome.path,
                                  "PATH": "/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin",
-                                 "TMPDIR": scope.temporaryDirectory.path, "LANG": "en_US.UTF-8"]
+                                 "TMPDIR": scope.temporaryDirectory.path, "LANG": "en_US.UTF-8",
+                                 // Use macOS's public PEM roots without granting keychain access.
+                                 "CODEX_CA_CERTIFICATE": "/private/etc/ssl/cert.pem"]
             let stdin = Pipe(), stdout = Pipe()
             child.standardInput = stdin; child.standardOutput = stdout; child.standardError = FileHandle.nullDevice
             input = stdin.fileHandleForWriting; output = stdout.fileHandleForReading

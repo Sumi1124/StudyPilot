@@ -185,3 +185,22 @@ The signed-out protocol test verifies the memory-disabled configuration and that
 an ephemeral thread stays out of saved history. It makes no authenticated model
 turn, so real account access and answer quality still require user testing.
 Memory being disabled here is not a claim about OpenAI service retention.
+
+## Sign-in connectivity fix (1.27.2)
+
+The process policy now allows macOS's DNS responder socket at both its public
+and canonical paths. The clean child environment sets `CODEX_CA_CERTIFICATE` to
+`/private/etc/ssl/cert.pem`, macOS's public root-certificate bundle. This avoids
+requiring access to a student's keychains and keeps HTTPS certificate validation
+enabled. Custom private certificate bundles are not inherited from other apps.
+
+`python3 Scripts/test-codex-protocol.py --network` additionally exercises Codex's
+actual HTTPS authentication client in an empty, isolated home. It requests a
+temporary device-code login, cancels it without displaying the codes or opening
+a browser, and verifies the process remains signed out. Browser-login startup
+alone did not exercise this network step, which is why earlier checks missed it.
+The full student's browser sign-in and model turn still require a live check.
+
+The default sandbox gate now checks startup and signed-out account state without
+binding the browser callback port, so it can run beside StudyPilot's active
+sign-in listener. The optional network check above covers real auth connectivity.

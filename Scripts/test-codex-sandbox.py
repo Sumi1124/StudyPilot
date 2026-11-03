@@ -57,11 +57,13 @@ int main(int argc, char **argv) {
     print('PASS: own-file access; other-workspace read/write, symlink escape and shell execution denied', flush=True)
     for name in ['CodexHome', 'Workspace', 'Temporary']:
         (private/name).mkdir(mode=0o700)
-    env = {'HOME': str(private), 'CODEX_HOME': str(private/'CodexHome'), 'TMPDIR': str(private/'Temporary'), 'PATH': '/usr/bin:/bin', 'LANG': 'en_US.UTF-8'}
+    env = {'HOME': str(private), 'CODEX_HOME': str(private/'CodexHome'), 'TMPDIR': str(private/'Temporary'), 'PATH': '/usr/bin:/bin', 'LANG': 'en_US.UTF-8', 'CODEX_CA_CERTIFICATE': '/private/etc/ssl/cert.pem'}
     cmd = sandbox(binary, private) + ['app-server', '--stdio', '--strict-config', '-c', 'features.shell_tool=false', '-c', 'features.unified_exec=false', '-c', 'features.apps=false', '-c', 'features.plugins=false', '-c', 'features.code_mode=false', '-c', 'features.code_mode_host=false', '-c', 'features.apply_patch_freeform=false', '-c', 'web_search="disabled"', '-c', 'sandbox_mode="read-only"', '-c', 'cli_auth_credentials_store="file"', '-c', 'forced_login_method="chatgpt"']
     proc = subprocess.Popen(cmd, cwd=private/'Workspace', env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
-        for ident, method, params in [(1, 'initialize', {'clientInfo': {'name': 'StudyPilotSecurityProbe', 'version': '1.0'}}), (2, 'account/read', {}), (3, 'account/login/start', {'type': 'chatgpt'})]:
+        # Browser login uses a fixed port that may belong to the running app.
+        # Use test-codex-protocol.py --network for a non-conflicting auth check.
+        for ident, method, params in [(1, 'initialize', {'clientInfo': {'name': 'StudyPilotSecurityProbe', 'version': '1.0'}}), (2, 'account/read', {})]:
             proc.stdin.write(json.dumps({'id': ident, 'method': method, 'params': params})+'\n'); proc.stdin.flush()
             while True:
                 if not select.select([proc.stdout], [], [], 15)[0]: raise RuntimeError('Timed out: '+method)
@@ -71,10 +73,6 @@ int main(int argc, char **argv) {
                 if obj.get('id') == ident:
                     if 'error' in obj: raise RuntimeError(method+' failed')
                     if ident == 2: assert obj['result']['account'] is None
-                    if ident == 3:
-                        from urllib.parse import urlparse
-                        url = urlparse(obj['result']['authUrl'])
-                        assert url.scheme == 'https' and (url.hostname == 'auth.openai.com' or url.hostname.endswith('.openai.com'))
                     print('PASS: '+method, flush=True)
                     break
             if ident == 1:
