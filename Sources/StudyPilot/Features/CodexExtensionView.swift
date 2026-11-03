@@ -3,6 +3,7 @@ import StudyPilotData
 import StudyPilotCore
 
 struct CodexExtensionView: View {
+    @Environment(StudyChatService.self) private var chat
     @Environment(CodexExtensionService.self) private var codex
     @LiveQuery(sort: \Note.title) private var notes: [Note]
     @AppStorage("codexExtensionEnabled") private var enabled = false
@@ -99,7 +100,7 @@ struct CodexExtensionView: View {
                             LazyVStack(alignment: .leading, spacing: 16) {
                                 if codex.lines.isEmpty {
                                     EmptyState(symbol: "bubble.left.and.text.bubble.right", title: "Start a conversation",
-                                               message: "Choose notes below if you want Codex to use them. Your other StudyPilot data is not added to the message.")
+                                               message: "Choose notes below if you want Codex to use them. Task and calendar questions use your enabled live workspace context.")
                                 }
                                 ForEach(codex.lines) { line in
                                     VStack(alignment: .leading, spacing: 5) {
@@ -124,6 +125,12 @@ struct CodexExtensionView: View {
                                 Button("Reject") { Task { await codex.resolveApproval(approval, approve: false) } }
                             }.padding(10).background(Color.pilot.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
                         }
+                        DisclosureGroup("Live calendar & tasks") {
+                            Toggle("Use my study tasks and note titles", isOn: Binding(get: { chat.useStudyContext }, set: { chat.useStudyContext = $0 }))
+                            CalendarChatPanel()
+                            Text(chat.calendar.connectionSummary).font(.caption).foregroundStyle(.secondary)
+                            Text("Relevant current records are sent to OpenAI when you ask about your tasks or schedule.").font(.caption).foregroundStyle(.secondary)
+                        }.disabled(codex.isBusy || codex.isResponding)
                         DisclosureGroup("Share selected notes (\(selectedNoteIDs.count))") {
                             Text("Only checked note text is sent to OpenAI in your next message and saved in that Codex conversation. Up to five notes, 20,000 characters each.")
                                 .font(.caption).foregroundStyle(.secondary)
@@ -194,10 +201,13 @@ struct CodexExtensionView: View {
 
     private func send() {
         let prompt = draft
+        let workspace: String
+        do { workspace = try chat.liveWorkspaceContext(for: prompt) }
+        catch { codex.error = error.localizedDescription; return }
         draft = ""
         let material = notes.filter { selectedNoteIDs.contains($0.id) }.map { (title: $0.title, body: $0.body) }
         let fileIDs = selectedFileIDs
-        Task { await codex.send(prompt, selectedNotes: material, selectedFileIDs: fileIDs) }
+        Task { await codex.send(prompt, selectedNotes: material, selectedFileIDs: fileIDs, workspaceContext: workspace) }
     }
 }
 

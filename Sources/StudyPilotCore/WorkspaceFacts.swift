@@ -30,6 +30,14 @@ public enum WorkspaceFactRequest: Equatable, Sendable {
     }
 }
 public enum WorkspaceFacts {
+    public static func needsWorkspaceContext(_ text: String) -> Bool {
+        let words = Set(StudyUnderstanding.tokens(text))
+        return !words.isDisjoint(with: ["task", "tasks", "assignment", "assignments", "homework", "deadline", "deadlines", "calendar", "calender", "schedule", "agenda", "overdue", "due", "unfinished", "outstanding", "remaining"]) || asksRemainingWork(text)
+    }
+    private static func asksRemainingWork(_ text: String) -> Bool {
+        let value = StudyUnderstanding.tokens(text).joined(separator: " ")
+        return ["what do i need to do", "what should i do", "what is left", "what s left", "what do i have left", "what i need to do", "what needs to be done", "what do i need to get done", "what i need to get done", "what is needed to be done", "what do i have to do", "what should i work on"].contains { value.contains($0) }
+    }
     /// Conservative routing: tutoring, hypothetical questions, and mutations stay with the assistant.
     public static func request(_ text: String, followingWorkspaceAnswer: Bool = false, previousScope: String? = nil) -> WorkspaceFactRequest? {
         let words = Set(StudyUnderstanding.tokens(text)), normalized = StudyUnderstanding.tokens(text).joined(separator: " ")
@@ -38,27 +46,27 @@ public enum WorkspaceFacts {
         if normalized.hasPrefix("what is a ") && !followingWorkspaceAnswer { return nil }
         if !words.isDisjoint(with: ["week", "weeks", "days", "yesterday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]) { return nil }
         if !words.isDisjoint(with: ["am", "pm"]) || ((!words.isDisjoint(with: ["at", "before", "after"])) && words.contains(where: { Int($0) != nil })) { return nil }
-        if !words.isDisjoint(with: ["completed", "finished", "done"]) { return nil }
+        if !words.isDisjoint(with: ["completed", "finished", "done"]) && !asksRemainingWork(text) { return nil }
         if normalized.contains("when can") || normalized.contains("when should") || normalized.hasPrefix("help ") || normalized.hasPrefix("plan ") { return nil }
         let explain = !words.isDisjoint(with: ["explain", "teach", "solve", "why", "hypothetical", "imagine"])
         guard !explain else { return nil }
         if followingWorkspaceAnswer, (!StudyUnderstanding.topics(in: text).isEmpty || !words.isDisjoint(with: ["it", "that", "this", "one"])), words.isDisjoint(with: ["today", "tomorrow", "overdue", "next"]) {
             switch previousScope { case "today": return .tasksToday; case "tomorrow": return .tasksTomorrow; case "overdue": return .overdue; case "next": return .nextDeadline; case "calendar:0": return .calendar(0); case "calendar:1": return .calendar(1); default: break }
         }
-        if !words.isDisjoint(with: ["calendar", "schedule", "agenda"]) && !words.isDisjoint(with: ["today", "tomorrow"]) {
+        if !words.isDisjoint(with: ["calendar", "calender", "schedule", "agenda"]) && !words.isDisjoint(with: ["today", "tomorrow"]) {
             return .calendar(words.contains("tomorrow") ? 1 : 0)
         }
-        let taskQuestion = !words.isDisjoint(with: ["task", "tasks", "assignment", "assignments", "homework", "deadline", "deadlines", "due", "overdue"]) || (followingWorkspaceAnswer && !StudyUnderstanding.topics(in: text).isEmpty)
-        let personal = !words.isDisjoint(with: ["my", "our", "i", "have", "due", "overdue", "deadline", "deadlines", "list", "show", "find"]) || followingWorkspaceAnswer || !StudyUnderstanding.topics(in: text).isEmpty
+        let taskQuestion = asksRemainingWork(text) || !words.isDisjoint(with: ["task", "tasks", "assignment", "assignments", "homework", "deadline", "deadlines", "due", "overdue"]) || (followingWorkspaceAnswer && !StudyUnderstanding.topics(in: text).isEmpty)
+        let personal = asksRemainingWork(text) || !words.isDisjoint(with: ["my", "our", "i", "have", "due", "overdue", "deadline", "deadlines", "list", "show", "find", "left", "remaining", "unfinished", "outstanding"]) || followingWorkspaceAnswer || !StudyUnderstanding.topics(in: text).isEmpty
         guard taskQuestion && personal else { return nil }
         if words.contains("overdue") || normalized.contains("past due") { return .overdue }
         if words.contains("next") && !words.isDisjoint(with: ["deadline", "due"]) { return .nextDeadline }
         if words.contains("tomorrow") { return .tasksTomorrow }
         if words.contains("today") { return .tasksToday }
-        if !words.isDisjoint(with: ["list", "show", "find", "which", "what", "when", "have", "about"]) || normalized.hasSuffix("tasks") || normalized.hasSuffix("task") { return .tasks(text) }
+        if !words.isDisjoint(with: ["list", "show", "find", "which", "what", "when", "have", "about", "remind"]) || normalized.hasSuffix("tasks") || normalized.hasSuffix("task") { return .tasks(text) }
         return nil
     }
-    private static let generic = Set(StudyUnderstanding.tokens("what which when is are the my our i have do does due deadline deadlines task tasks assignment assignments homework show list find about a an on in for to today tomorrow overdue next upcoming calendar schedule agenda event events s how many unfinished active please can could would you me tell need want right now all currently it that this one those them"))
+    private static let generic = Set(StudyUnderstanding.tokens("what which when is are the my our i have do does due deadline deadlines task tasks assignment assignments homework show list find about a an on in for to today tomorrow overdue next upcoming calendar calender schedule agenda event events s how many unfinished active of please can could would you me tell need want right now all currently it that this one those them left remaining still outstanding remind needed needs be get should done work"))
     public static func followupQuery(_ text: String, sources: [StudyChatSource]) -> String? {
         let words = Set(StudyUnderstanding.tokens(text))
         guard !words.isDisjoint(with: ["it", "that", "this", "one"]), StudyUnderstanding.topics(in: text).isEmpty else { return text }

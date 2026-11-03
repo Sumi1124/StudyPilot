@@ -15,7 +15,7 @@ struct AIModelSettings: View {
             if chat.models.choice == .codex {
                 Divider()
                 Label("Codex · separate from memory", systemImage: "brain") .font(.headline)
-                Text("Each request starts fresh. Earlier chats and saved memory are not sent. Chat calendar and study context start off; enable them only when you want to share those details. Estimates, planning advice and notebook questions send the inputs shown in that feature to OpenAI.")
+                Text("Each request starts fresh. Earlier chats and saved memory are not sent. Live task and calendar context follows your Context & sources settings. Estimates, planning advice and notebook questions send the inputs shown in that feature to OpenAI.")
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Enable Codex connection", isOn: $codexEnabled)
                 Text(codex.connected ? "Connected to your ChatGPT account" : codex.status).font(.caption).foregroundStyle(.secondary)

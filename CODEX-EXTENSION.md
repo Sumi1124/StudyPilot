@@ -175,8 +175,9 @@ thread configuration disable both `memories.use_memories` and
 They never resume the extension conversation or include earlier study-chat
 messages. Codex study-chat history is saved in a separate local file; seeing an
 old answer does not send it with your next request. Include needed details again
-for follow-ups. Calendar and saved-study context start off on provider selection
-and can be explicitly enabled in Context & sources. Attachments are explicit.
+for follow-ups. Since 1.28.0, current task and calendar context follows the
+persistent Context & sources settings independently of provider selection.
+Attachments are explicit.
 Estimates use their displayed task input; planning advice uses the selected tasks
 and free-time totals; notebook answers use the selected excerpts. Existing schema
 validation and calendar review still gate changes.
@@ -204,3 +205,19 @@ The full student's browser sign-in and model turn still require a live check.
 The default sandbox gate now checks startup and signed-out account state without
 binding the browser callback port, so it can run beside StudyPilot's active
 sign-in listener. The optional network check above covers real auth connectivity.
+
+## Live workspace context (1.28.0)
+
+Chat memory and current workspace access are independent. Choosing Codex no
+longer disables task or calendar context. Context & sources controls are retained
+across provider changes and launches. On upgrade the old forced-off study-context
+default is migrated once; later explicit opt-outs persist. Calendar context is on
+by default and its explicit switch persists.
+
+Remaining-work questions are answered directly from saved unfinished assignments
+and selected assignment-calendar deadlines. The Codex extension supplies these
+same fresh records when asked about tasks or calendars. Relevant current context
+is sent to OpenAI with Codex requests; earlier study-chat messages remain excluded
+in the alternative provider. The UI distinguishes disconnected calendars from a
+connected calendar with no assignment calendars selected. This provides reminders
+inside chat; it does not claim to create new timed notifications.

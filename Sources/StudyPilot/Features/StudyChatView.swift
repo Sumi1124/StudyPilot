@@ -76,11 +76,13 @@ struct StudyChatView: View {
             }
             if let reason = chat.unavailableReason { Text(reason + " Saved workspace answers are still available.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             if chat.models.choice == .codex {
-                Label("Fresh request · memory off", systemImage: "lock.shield").font(.caption).foregroundStyle(.secondary)
-                Text("Codex receives this message and any context you explicitly enable. Include the details again for follow-up questions.").font(.caption).foregroundStyle(.secondary)
+                Label("Fresh request · chat memory off", systemImage: "lock.shield").font(.caption).foregroundStyle(.secondary)
+                Text("Codex uses your current message and enabled live task/calendar context. Earlier chats stay separate.").font(.caption).foregroundStyle(.secondary)
             }
+            Text(chat.calendar.connectionSummary).font(.caption).foregroundStyle(.secondary)
             Text("Workspace facts come directly from saved records. AI explanations may need checking.").font(.caption).foregroundStyle(.secondary)
             HStack(spacing: 8) {
+                Button("What’s left?") { draft = "What tasks do I have left?" }
                 Button("Due today") { draft = "What tasks are due today?" }
                 Button("Overdue") { draft = "Which tasks are overdue?" }
                 Button("My calendar") { draft = "What is on my calendar today?" }

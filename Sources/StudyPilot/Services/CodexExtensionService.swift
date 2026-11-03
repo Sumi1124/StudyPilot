@@ -338,13 +338,13 @@ struct CodexModelOption: Identifiable, Equatable {
         } catch { self.error = error.localizedDescription }
     }
 
-    func send(_ text: String, selectedNotes: [(title: String, body: String)], selectedFileIDs: Set<UUID> = []) async {
+    func send(_ text: String, selectedNotes: [(title: String, body: String)], selectedFileIDs: Set<UUID> = [], workspaceContext: String = "") async {
         lastInteraction = Date()
         guard !isBusy, !isResponding, !turningOff else { return }
         isBusy = true
         defer { isBusy = false }
         let prompt = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !prompt.isEmpty, prompt.count <= 16_000, selectedNotes.count <= 5,
+        guard !prompt.isEmpty, prompt.count <= 16_000, workspaceContext.count <= 12_000, selectedNotes.count <= 5,
               selectedNotes.allSatisfy({ $0.body.count <= 20_000 }) else {
             error = "Keep the message under 16,000 characters and select up to five notes of 20,000 characters each."
             return
@@ -360,6 +360,7 @@ struct CodexModelOption: Identifiable, Equatable {
             turnFileIDs = selectedFileIDs
             activeTurnID = nil
             var content = prompt
+            if !workspaceContext.isEmpty { content += "\n\n" + workspaceContext }
             if !selectedFileIDs.isEmpty {
                 let selected = sharedFiles.filter { selectedFileIDs.contains($0.id) }
                     .map { ["file_id": $0.id.uuidString, "name": $0.name] }

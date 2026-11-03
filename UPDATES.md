@@ -1,5 +1,13 @@
 # In-app updates
 
+## Live calendar and unfinished-task answers (1.28.0)
+
+- “What tasks do I have left?” and similar reminders now read actual unfinished assignments and selected calendar deadlines directly, excluding completed local work.
+- Selecting Codex no longer turns off calendar/task context. Context settings persist, while earlier chat history and Codex memory remain separate. The previously forced-off study-context default is migrated once.
+- The Codex extension also receives fresh relevant workspace records for task/calendar questions, with visible context controls.
+- Chat shows calendar connection status and explains when assignment calendars still need selecting. A “What’s left?” shortcut opens the remaining-work question.
+- External deadlines retain the explicit unknown-completion label; they are not silently marked finished.
+
 ## Codex sign-in connection fix (1.27.2)
 
 - Fixes network restrictions that prevented hostname lookup and certificate initialization during Codex sign-in.

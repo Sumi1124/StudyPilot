@@ -99,3 +99,19 @@ private func factTasks() -> [WorkspaceFactTask] {
 @Test func anUnanchoredPronounDoesNotBecomeAnExactAnswerAboutEveryTask() {
     #expect(WorkspaceFacts.followupQuery("When is it due?", sources: []) == nil)
 }
+
+@Test func remainingWorkQuestionsUseActualUnfinishedRecords() throws {
+    for text in ["What task do I have left?", "What tasks do I have left?", "What do I need to do?", "What is needed to be done?", "What should I work on?", "Remind me what I need to get done", "Remind me of my tasks", "What homework is still outstanding?"] {
+        let request = try #require(WorkspaceFacts.request(text))
+        #expect(WorkspaceFacts.needsWorkspaceContext(text))
+        let answer = try #require(WorkspaceFacts.taskAnswer(request, tasks: factTasks(), now: factDate(26, 12), calendar: factCalendar, query: text))
+        #expect(answer.sources.count == 4)
+        #expect(!answer.sources.contains { $0.title == "Already finished" })
+    }
+    #expect(WorkspaceFacts.request("What tasks do I have left today?") == .tasksToday)
+    #expect(WorkspaceFacts.request("What is on my calender today?") == .calendar(0))
+    for text in ["Show completed tasks", "Explain how to finish a task", "Move my math session tomorrow"] {
+        #expect(WorkspaceFacts.request(text) == nil)
+    }
+    #expect(!WorkspaceFacts.needsWorkspaceContext("Explain quadratic equations"))
+}

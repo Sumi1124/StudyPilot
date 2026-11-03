@@ -24,7 +24,9 @@ struct CalendarChatProposal: Identifiable {
 }
 
 @MainActor @Observable final class CalendarChatService {
-    var enabled = true
+    var enabled = UserDefaults.standard.object(forKey: "chatCalendarContextEnabled") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(enabled, forKey: "chatCalendarContextEnabled") }
+    }
     var studyBlocksOnly = false
     var from = Calendar.current.startOfDay(for: Date())
     var days = 7
@@ -35,6 +37,15 @@ struct CalendarChatProposal: Identifiable {
     private var context: ModelContext?
     private var planning: CalendarPlanningService?
     var connected: Bool { planning?.hasAccess == true }
+    var connectionSummary: String {
+        guard enabled else { return "Calendar context is off. Enable Use my calendar in Context & sources." }
+        guard connected else { return "Using StudyPilot tasks and events. Connect calendars to include your Google or school calendar." }
+        guard let planning else { return "Calendar is opening." }
+        if planning.settings.deadlineCalendarIDs.isEmpty {
+            return "Calendar connected · no assignment calendars selected. Choose assignment calendars in Plan my study to include their deadlines."
+        }
+        return "Calendar connected · \(planning.settings.deadlineCalendarIDs.count) assignment calendars · Google updates depend on macOS Calendar sync."
+    }
     var range: DateInterval { DateInterval(start: Calendar.current.startOfDay(for: from), end: Calendar.current.date(byAdding: .day, value: days, to: Calendar.current.startOfDay(for: from))!) }
     func configure(context: ModelContext, planning: CalendarPlanningService) { self.context = context; self.planning = planning }
     func connect() async { await planning?.connect(); if let error = planning?.error { self.error = error } else { refresh() } }
@@ -105,7 +116,7 @@ struct CalendarChatProposal: Identifiable {
                 let source = StudyChatSource(id: item.id, title: item.title, detail: "Due \(item.deadline.formatted(date: .abbreviated, time: .shortened)) · \(calendarName) · calendar deadline; completion not tracked", kind: "calendar", date: item.deadline)
                 return WorkspaceFactTask(record: AssignmentRecord(title: item.title, details: item.details, dueDate: item.deadline), subject: StudyUnderstanding.subjectHint(title: item.title), calendarSource: source)
             }
-            scope = "Calendar deadlines checked in the planner window: last 7 days through the next \(planning.settings.preferences.days) days, from selected assignment calendars. Google updates depend on macOS Calendar sync."
+            scope = connectionSummary + "\nCalendar deadlines checked in the planner window: last 7 days through the next \(planning.settings.preferences.days) days, from selected assignment calendars. Google updates depend on macOS Calendar sync."
         }
         let answer = WorkspaceFacts.taskAnswer(request, tasks: tasks, now: now, query: query) ?? .init(text: "I couldn't check that request. Please try a specific task or date.", sources: [])
         return .init(text: answer.text + "\n\n" + scope, sources: answer.sources)
