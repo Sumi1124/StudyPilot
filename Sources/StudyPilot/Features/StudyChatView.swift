@@ -75,6 +75,10 @@ struct StudyChatView: View {
                 Spacer()
             }
             if let reason = chat.unavailableReason { Text(reason + " Saved workspace answers are still available.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+            if chat.models.choice == .codex {
+                Label("Fresh request · memory off", systemImage: "lock.shield").font(.caption).foregroundStyle(.secondary)
+                Text("Codex receives this message and any context you explicitly enable. Include the details again for follow-up questions.").font(.caption).foregroundStyle(.secondary)
+            }
             Text("Workspace facts come directly from saved records. AI explanations may need checking.").font(.caption).foregroundStyle(.secondary)
             HStack(spacing: 8) {
                 Button("Due today") { draft = "What tasks are due today?" }
@@ -92,9 +96,9 @@ struct StudyChatView: View {
                 if let status = chat.contextStatus { Text(status).font(.caption).foregroundStyle(.secondary) }
                 CalendarChatPanel()
                 Divider()
-                Text("Task lists, deadlines, and today's or tomorrow's calendar are answered from saved data. General explanations use your selected local model. Context cards show which saved items were provided, not independent proof of an AI explanation.").font(.caption).foregroundStyle(.secondary)
+                Text("Task lists, deadlines, and today's or tomorrow's calendar are answered from saved data. General explanations use your selected AI provider. Context cards show which saved items were provided, not independent proof of an AI explanation.").font(.caption).foregroundStyle(.secondary)
                 if let reason = chat.unavailableReason { Text(reason + " Saved-data answers still work.").font(.caption).foregroundStyle(.orange) }
-                Text("Conversations stay on this Mac and are separate from workspace JSON backups.").font(.caption).foregroundStyle(.secondary)
+                Text("Conversations are saved on this Mac separately from workspace JSON backups. Codex has separate history and receives only your current message, attachment and context you enable. Earlier messages are not sent.").font(.caption).foregroundStyle(.secondary)
             }.padding(20)
         }.frame(width: 550, height: 480)
     }

@@ -63,6 +63,12 @@ struct CodexModelOption: Identifiable, Equatable {
     @ObservationIgnored private var idleTimeout: Task<Void, Never>?
     @ObservationIgnored private var lastInteraction = Date()
 
+    @ObservationIgnored private var providerThreadID: String?
+    @ObservationIgnored private var providerTurnID: String?
+    @ObservationIgnored private var providerText = ""
+    @ObservationIgnored private var providerFinished = false
+    @ObservationIgnored private var providerFailure: String?
+
     private var executable: URL? {
         let candidates = [
             "/opt/homebrew/bin/codex", "/usr/local/bin/codex",
@@ -101,6 +107,8 @@ struct CodexModelOption: Identifiable, Equatable {
                                "-DBINARY_DIRECTORY=\(binary.deletingLastPathComponent().path)",
                                "-p", CodexSecurityPolicy.sandboxProfile, binary.path,
                                "app-server", "--stdio", "--strict-config",
+                               "-c", "memories.use_memories=false",
+                               "-c", "memories.generate_memories=false",
                                "-c", "features.shell_tool=false",
                                "-c", "features.unified_exec=false",
                                "-c", "features.apps=false",
@@ -385,6 +393,66 @@ struct CodexModelOption: Identifiable, Equatable {
         }
     }
 
+    /// A fresh, tool-free request. Never resumes the extension chat or registers its file tools.
+    func generateStudyReply(prompt: String, instructions: String, schema: [String: Any]) async throws -> String {
+        guard UserDefaults.standard.bool(forKey: "codexExtensionEnabled") else {
+            throw ExtensionError.server("Enable Codex in Settings → AI model, then connect your own account.")
+        }
+        if process == nil { await start() }
+        guard !isBusy, !isResponding, !turningOff else {
+            throw ExtensionError.server("Codex is busy. Finish its current request, then try again.")
+        }
+        isBusy = true
+        let currentGeneration = generation
+        defer {
+            if let thread = providerThreadID {
+                let interruptedTurn = providerFinished ? nil : providerTurnID
+                Task {
+                    guard generation == currentGeneration else { return }
+                    if let turn = interruptedTurn {
+                        _ = try? await request("turn/interrupt", ["threadId": thread, "turnId": turn])
+                    }
+                    guard generation == currentGeneration else { return }
+                    _ = try? await request("thread/unsubscribe", ["threadId": thread])
+                }
+            }
+            providerThreadID = nil; providerTurnID = nil; providerText = ""
+            providerFinished = false; providerFailure = nil
+            isResponding = false; isBusy = false
+        }
+        try await refreshAccount()
+        guard connected, let scope = isolation else { throw ExtensionError.notConnected }
+        let config = try await request("config/read", ["includeLayers": false])
+        guard let effective = config["config"] as? [String: Any],
+              let memories = effective["memories"] as? [String: Any],
+              memories["use_memories"] as? Bool == false,
+              memories["generate_memories"] as? Bool == false else {
+            throw ExtensionError.server("Codex could not confirm memory is disabled. Update the official Codex CLI and reconnect.")
+        }
+        let params = try CodexAIRequest.threadParameters(workspace: scope.workspace.path,
+            model: selectedModelID, instructions: instructions)
+        let response = try await request("thread/start", params)
+        guard let thread = response["thread"] as? [String: Any],
+              let id = thread["id"] as? String,
+              thread["cwd"] as? String == scope.workspace.path else { throw ExtensionError.invalidResponse }
+        providerThreadID = id; providerFinished = false; providerFailure = nil; providerText = ""
+        isResponding = true; lastInteraction = Date()
+        let result = try await request("turn/start", ["threadId": id,
+            "input": [["type": "text", "text": prompt]], "outputSchema": schema,
+            "approvalPolicy": "never"])
+        providerTurnID = (result["turn"] as? [String: Any])?["id"] as? String
+        let deadline = Date().addingTimeInterval(180)
+        while !providerFinished {
+            try Task.checkCancellation()
+            guard generation == currentGeneration, connected else { throw ExtensionError.disconnected }
+            guard Date() < deadline else { throw ExtensionError.server("Codex took too long. Try again.") }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        if let providerFailure { throw ExtensionError.server(providerFailure) }
+        guard generation == currentGeneration, !providerText.isEmpty else { throw ExtensionError.invalidResponse }
+        return providerText
+    }
+
     func disconnect() async {
         guard !turningOff else { return }
         turningOff = true
@@ -501,6 +569,29 @@ struct CodexModelOption: Identifiable, Equatable {
     }
 
     private func notification(_ method: String, _ params: [String: Any]) {
+        if providerThreadID != nil, method == "error", params["threadId"] == nil {
+            providerFailure = "Codex could not complete this request."; providerFinished = true
+            return
+        }
+        if let thread = providerThreadID, params["threadId"] as? String == thread {
+            switch method {
+            case "turn/started": providerTurnID = (params["turn"] as? [String: Any])?["id"] as? String
+            case "item/completed":
+                if let item = params["item"] as? [String: Any], item["type"] as? String == "agentMessage",
+                   let text = item["text"] as? String {
+                    if text.utf8.count <= 128_000 { providerText = text }
+                    else { providerFailure = "Codex returned too much text."; providerFinished = true }
+                }
+            case "turn/completed":
+                providerFinished = true
+                if (params["turn"] as? [String: Any])?["status"] as? String != "completed" {
+                    providerFailure = "Codex did not finish this request. Try again."
+                }
+            case "error": providerFailure = "Codex could not complete this request."; providerFinished = true
+            default: break
+            }
+            return
+        }
         switch method {
         case "turn/started":
             guard let thread = params["threadId"] as? String, thread == activeThreadID,

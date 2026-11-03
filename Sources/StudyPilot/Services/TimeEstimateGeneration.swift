@@ -6,7 +6,12 @@ import FoundationModels
 #endif
 
 @MainActor enum TimeEstimateGeneration {
-    static func estimate(input: EffortEstimateInput, model: ChatModelChoice, client: OllamaClient) async throws -> EffortEstimate {
+    static func estimate(input: EffortEstimateInput, model: ChatModelChoice, client: OllamaClient, codex: CodexExtensionService? = nil) async throws -> EffortEstimate {
+        if model == .codex {
+            guard let codex else { throw PlanningError.invalid("Open AI model settings and connect Codex first.") }
+            let text = try await codex.generateStudyReply(prompt: input.prompt(), instructions: EffortEstimation.instructions, schema: EffortEstimation.schema)
+            return try EffortEstimate.decode(text)
+        }
         if model == .qwen08 { return try await client.estimate(input: input) }
         #if canImport(FoundationModels)
         if #available(macOS 26, *) {
@@ -33,13 +38,13 @@ import FoundationModels
     private(set) var error: String?
     private var request: Task<Void, Never>?
     private var requestID: UUID?
-    func start(input: EffortEstimateInput, model: ChatModelChoice, client: OllamaClient) {
+    func start(input: EffortEstimateInput, model: ChatModelChoice, client: OllamaClient, codex: CodexExtensionService? = nil) {
         cancel(); estimate = nil; basis = input; self.model = model; error = nil
         let id = UUID(); requestID = id; running = true
         request = Task {
             defer { if requestID == id { running = false; request = nil; requestID = nil } }
             do {
-                let value = try await TimeEstimateGeneration.estimate(input: input, model: model, client: client)
+                let value = try await TimeEstimateGeneration.estimate(input: input, model: model, client: client, codex: codex)
                 try Task.checkCancellation()
                 guard requestID == id else { return }
                 estimate = value

@@ -219,8 +219,10 @@ struct RootView: View {
                 if !updater.isBusy && !app.showingStudyPlanner { planning.removeFinishedTaskSessions(context: context); planning.checkUnfinished(context: context) }
             }
             .task {
+                chat.models.codex = codex
                 Task { await updater.refreshAvailability() }
                 if let folder = context.container.configurations.first?.url.deletingLastPathComponent() { planning.configure(folder: folder); chat.configure(folder: folder); chat.calendar.configure(context: context, planning: planning) }
+                if chat.models.choice == .codex && codexExtensionEnabled { await codex.start() }
                 app.planning = planning
                 ReminderService.shared.finishedTaskIDs = Set(planning.settings.completedTasks?.keys.map { $0 } ?? [])
                 planning.removeFinishedTaskSessions(context: context, force: true)

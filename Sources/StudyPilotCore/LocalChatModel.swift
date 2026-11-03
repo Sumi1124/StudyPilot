@@ -1,9 +1,10 @@
 import Foundation
 
 public enum ChatModelChoice: String, CaseIterable, Identifiable, Sendable {
-    case apple, qwen08
+    case apple, qwen08, codex
     public var id: String { rawValue }
-    public var title: String { self == .apple ? "Apple Intelligence" : "Qwen 3.5 · 0.8B" }
+    public var historyFileName: String { self == .codex ? "CodexStudyChats.json" : "StudyChats.json" }
+    public var title: String { self == .apple ? "Apple Intelligence" : self == .codex ? "Codex · ChatGPT" : "Qwen 3.5 · 0.8B" }
     public static func saved(_ value: String?) -> Self { Self(rawValue: value ?? "") ?? .apple }
 }
 

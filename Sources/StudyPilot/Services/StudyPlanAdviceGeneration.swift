@@ -6,7 +6,12 @@ import FoundationModels
 #endif
 
 @MainActor enum StudyPlanAdviceGeneration {
-    static func suggest(input: StudyPlanAdviceInput, model: ChatModelChoice, client: OllamaClient) async throws -> StudyPlanAdvice {
+    static func suggest(input: StudyPlanAdviceInput, model: ChatModelChoice, client: OllamaClient, codex: CodexExtensionService? = nil) async throws -> StudyPlanAdvice {
+        if model == .codex {
+            guard let codex else { throw PlanningError.invalid("Open AI model settings and connect Codex first.") }
+            let text = try await codex.generateStudyReply(prompt: input.prompt(), instructions: StudyPlanAdvising.instructions, schema: StudyPlanAdvising.schema)
+            return try StudyPlanAdvice.decode(text)
+        }
         if model == .qwen08 { return try await client.studyPlanAdvice(input: input) }
         #if canImport(FoundationModels)
         if #available(macOS 26, *) {
@@ -35,7 +40,7 @@ import FoundationModels
     private var request: Task<Void, Never>?
     private var requestID: UUID?
 
-    func start(input: StudyPlanAdviceInput, model: ChatModelChoice, client: OllamaClient) {
+    func start(input: StudyPlanAdviceInput, model: ChatModelChoice, client: OllamaClient, codex: CodexExtensionService? = nil) {
         cancel()
         advice = nil
         basis = input
@@ -53,7 +58,7 @@ import FoundationModels
                 }
             }
             do {
-                let value = try await StudyPlanAdviceGeneration.suggest(input: input, model: model, client: client)
+                let value = try await StudyPlanAdviceGeneration.suggest(input: input, model: model, client: client, codex: codex)
                 try Task.checkCancellation()
                 guard requestID == id else { return }
                 advice = value

@@ -30,10 +30,11 @@ private struct TimeEstimatePanel: View {
                 TextField("Work left (optional, e.g. 12 questions)", text: $workLeft, axis: .vertical).lineLimit(2...3).textFieldStyle(.roundedBorder)
                 if workLeft.count > 500 { Text("Keep this to 500 characters.").font(.caption).foregroundStyle(.orange) }
                 Text("Uses \(chat.models.choice.title). Change models in Settings → AI model.").font(.caption).foregroundStyle(.secondary)
+                if chat.models.choice == .codex { Text("Sends the task details shown here to OpenAI for this estimate. Memory is off.").font(.caption).foregroundStyle(.secondary) }
                 if let reason = chat.unavailableReason { Text(reason).font(.caption).foregroundStyle(.secondary) }
                 if chat.generating { Text("Wait for the current chat reply to finish before estimating.").font(.caption).foregroundStyle(.secondary) }
                 HStack {
-                    Button(controller.estimate == nil ? "Estimate remaining time" : "Estimate again") { controller.start(input: effectiveInput, model: chat.models.choice, client: chat.models.client) }
+                    Button(controller.estimate == nil ? "Estimate remaining time" : "Estimate again") { controller.start(input: effectiveInput, model: chat.models.choice, client: chat.models.client, codex: chat.models.codex) }
                         .disabled(controller.running || chat.generating || chat.unavailableReason != nil || workLeft.count > 500 || !input.canEstimate)
                     if controller.running { ProgressView().controlSize(.small); Button("Stop") { controller.cancel() } }
                 }

@@ -1,5 +1,14 @@
 # In-app updates
 
+## Codex as an alternative AI provider (1.27.0)
+
+- Choose Codex alongside Apple Intelligence and optional Qwen in Settings → AI model.
+- Use Codex for study chat, time estimates, planning advice and notebook questions with your own ChatGPT sign-in and selected model.
+- Each provider request uses a fresh ephemeral conversation with memory reading and generation disabled. Earlier chats are never attached. Codex study-chat history is stored separately on this Mac.
+- Calendar and saved-study context start off when selecting Codex; attachments and context are explicitly chosen. Feature-specific notices describe the task details, availability totals or excerpts sent to OpenAI.
+- Existing calendar review and validation still apply. Codex's separate extension chat and file approvals remain available.
+- 127 local tests pass. Signed-out app-server probes verify memory settings, ephemeral request support and exclusion from saved history. Authenticated model responses and two-account live tests remain unverified.
+
 ## Explicit Codex integration restrictions (1.26.1)
 
 Codex connected apps, plugins, unified command execution and code-mode hosts are explicitly disabled. This prevents its default integrations from expanding the study extension’s access. The reviewed study tools introduced in 1.26.0 remain available.

@@ -10,7 +10,14 @@ import FoundationModels
     let models = AIModelService()
     func selectModel(_ value: ChatModelChoice) {
         guard !generating else { return }
-        calendar.pending = nil; error = nil; models.select(value)
+        calendar.pending = nil; error = nil
+        let wasCodex = models.choice == .codex
+        models.select(value)
+        if value == .codex { useStudyContext = false; calendar.enabled = false }
+        if wasCodex != (value == .codex), let folder = url?.deletingLastPathComponent() {
+            threads = []; selectedID = nil; url = nil; loadFailed = false
+            configure(folder: folder)
+        }
     }
     var useStudyContext = UserDefaults.standard.object(forKey: "chatUseStudyContext") as? Bool ?? true {
         didSet { UserDefaults.standard.set(useStudyContext, forKey: "chatUseStudyContext") }
@@ -26,6 +33,9 @@ import FoundationModels
     private var requestID: UUID?
     var selected: StudyChatThread? { threads.first { $0.id == selectedID } }
     var unavailableReason: String? {
+        if models.choice == .codex {
+            return models.codex?.connected == true ? nil : "Connect Codex in Settings → AI model to use your ChatGPT account."
+        }
         if models.choice == .qwen08 { return models.unavailableReason }
         #if canImport(FoundationModels)
         if #available(macOS 26, *) {
@@ -42,7 +52,8 @@ import FoundationModels
     }
     func configure(folder: URL) {
         guard url == nil else { return }
-        url = folder.appendingPathComponent("StudyChats.json")
+        url = folder.appendingPathComponent(models.choice.historyFileName)
+        if models.choice == .codex { useStudyContext = false; calendar.enabled = false }
         guard let url, FileManager.default.fileExists(atPath: url.path) else { return }
         do { threads = try StudyChat.decode(Data(contentsOf: url)); selectedID = threads.first?.id }
         catch { loadFailed = true; self.error = "Your chat history could not be opened and has been preserved: \(error.localizedDescription)" }
@@ -100,8 +111,8 @@ import FoundationModels
             let learning = StudyUnderstanding.isLearningQuestion(cleaned)
             let snapshot = learning ? nil : try calendar.snapshot(query: query)
             let study = useStudyContext && StudyUnderstanding.needsSavedStudyContext(cleaned) ? try calendar.studyBundle(query: query) : nil
-            contextStatus = study.map { "\($0.sources.count) relevant study items included · task details and note titles stay on this Mac" } ?? (learning ? "Study help · calendar context was not needed for this question" : nil)
-            let prompt = try StudyChat.prompt(messages: threads[index].messages, calendarSnapshot: snapshot?.summary, studySnapshot: study?.text)
+            contextStatus = study.map { "\($0.sources.count) relevant study items included · using selected model" } ?? (learning ? "Study help · calendar context was not needed for this question" : nil)
+            let prompt = try StudyChat.prompt(messages: models.choice == .codex ? CodexAIRequest.currentMessage(in: threads[index].messages) : threads[index].messages, calendarSnapshot: snapshot?.summary, studySnapshot: study?.text)
             try save()
             generate(prompt: prompt, threadID: threads[index].id, snapshot: snapshot, sources: evidence(study: study?.sources ?? [], snapshot: snapshot, attachment: attachmentSource))
             return true
@@ -125,8 +136,8 @@ import FoundationModels
             let learning = StudyUnderstanding.isLearningQuestion(text)
             let snapshot = learning ? nil : try calendar.snapshot(query: query)
             let study = useStudyContext && StudyUnderstanding.needsSavedStudyContext(text) ? try calendar.studyBundle(query: query) : nil
-            contextStatus = study.map { "\($0.sources.count) relevant study items included · task details and note titles stay on this Mac" } ?? (learning ? "Study help · calendar context was not needed for this question" : nil)
-            generate(prompt: try StudyChat.prompt(messages: thread.messages, calendarSnapshot: snapshot?.summary, studySnapshot: study?.text), threadID: thread.id, snapshot: snapshot, sources: evidence(study: study?.sources ?? [], snapshot: snapshot, attachment: nil))
+            contextStatus = study.map { "\($0.sources.count) relevant study items included · using selected model" } ?? (learning ? "Study help · calendar context was not needed for this question" : nil)
+            generate(prompt: try StudyChat.prompt(messages: models.choice == .codex ? CodexAIRequest.currentMessage(in: thread.messages) : thread.messages, calendarSnapshot: snapshot?.summary, studySnapshot: study?.text), threadID: thread.id, snapshot: snapshot, sources: evidence(study: study?.sources ?? [], snapshot: snapshot, attachment: nil))
         }
         catch { self.error = error.localizedDescription }
     }
@@ -158,7 +169,12 @@ import FoundationModels
                 let wantsMove = StudyUnderstanding.requestsMove(messages: messages)
                 let eventIDs = snapshot.map { wantsMove ? Array($0.aliases.keys) : [] }
                 let result: CalendarChatResponse
-                if models.choice == .qwen08 {
+                if models.choice == .codex {
+                    guard let codex = models.codex else { throw PlanningError.invalid("Connect Codex in AI model settings first.") }
+                    let rules = (eventIDs == nil ? StudyChat.instructions : CalendarChat.instructions) + " For no calendar action return eventID none and start empty. For the next free slot use start next-free. Return only the requested JSON."
+                    let text = try await codex.generateStudyReply(prompt: prompt, instructions: rules, schema: CodexAIRequest.chatSchema(eventIDs: eventIDs))
+                    result = try CodexAIRequest.chatReply(text, eventIDs: eventIDs)
+                } else if models.choice == .qwen08 {
                     result = try await models.client.reply(prompt: prompt, eventIDs: eventIDs)
                 } else {
                     result = try await StudyChatGeneration.reply(to: prompt, eventIDs: eventIDs)

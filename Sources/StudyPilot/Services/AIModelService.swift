@@ -15,6 +15,7 @@ import StudyPilotCore
     private var downloadID: UUID?
     private var server: Process?
     private var managedServer: Process?
+    var codex: CodexExtensionService?
     let client = OllamaClient()
     func select(_ value: ChatModelChoice) {
         choice = value; UserDefaults.standard.set(value.rawValue, forKey: "chatModelChoice")

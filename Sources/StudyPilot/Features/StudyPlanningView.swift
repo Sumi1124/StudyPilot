@@ -273,6 +273,7 @@ struct StudyPlanningView: View {
                     Text("Get settings shaped around this workload and your real free time.").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
+                if chat.models.choice == .codex { Text("Selected assignments and free-time totals are sent to OpenAI for this request. Memory is off.").font(.caption).foregroundStyle(.secondary) }
                 Picker("AI model", selection: Binding(get: { chat.models.choice }, set: { selectCoachModel($0) })) {
                     ForEach(ChatModelChoice.allCases) { Text($0.title).tag($0) }
                 }.labelsHidden().frame(width: 190)
@@ -327,7 +328,7 @@ struct StudyPlanningView: View {
     private func requestCoachAdvice() {
         do {
             coachApplied = false
-            planCoach.start(input: try coachInput(), model: chat.models.choice, client: chat.models.client)
+            planCoach.start(input: try coachInput(), model: chat.models.choice, client: chat.models.client, codex: chat.models.codex)
         } catch { service.error = error.localizedDescription }
     }
     private func applyCoachAdvice(_ advice: StudyPlanAdvice) {

@@ -13,7 +13,7 @@ processes = []
 
 def launch(home):
     for name in ['CodexHome', 'Workspace', 'Temporary']: (home/name).mkdir(parents=True, mode=0o700)
-    cmd = ['/usr/bin/sandbox-exec', '-DROOT='+str(home), '-DEXECUTABLE='+binary, '-DBINARY_DIRECTORY='+str(Path(binary).parent), '-p', profile, binary, 'app-server', '--stdio', '--strict-config', '-c', 'features.shell_tool=false', '-c', 'features.unified_exec=false', '-c', 'features.apps=false', '-c', 'features.plugins=false', '-c', 'features.code_mode=false', '-c', 'features.code_mode_host=false', '-c', 'features.apply_patch_freeform=false', '-c', 'web_search="disabled"', '-c', 'sandbox_mode="read-only"', '-c', 'cli_auth_credentials_store="file"', '-c', 'forced_login_method="chatgpt"']
+    cmd = ['/usr/bin/sandbox-exec', '-DROOT='+str(home), '-DEXECUTABLE='+binary, '-DBINARY_DIRECTORY='+str(Path(binary).parent), '-p', profile, binary, 'app-server', '--stdio', '--strict-config', '-c', 'memories.use_memories=false', '-c', 'memories.generate_memories=false', '-c', 'features.shell_tool=false', '-c', 'features.unified_exec=false', '-c', 'features.apps=false', '-c', 'features.plugins=false', '-c', 'features.code_mode=false', '-c', 'features.code_mode_host=false', '-c', 'features.apply_patch_freeform=false', '-c', 'web_search="disabled"', '-c', 'sandbox_mode="read-only"', '-c', 'cli_auth_credentials_store="file"', '-c', 'forced_login_method="chatgpt"']
     env = {'HOME': str(home), 'CODEX_HOME': str(home/'CodexHome'), 'TMPDIR': str(home/'Temporary'), 'PATH': '/usr/bin:/bin', 'LANG': 'en_US.UTF-8'}
     p = subprocess.Popen(cmd, cwd=home/'Workspace', env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
     processes.append(p)
@@ -54,6 +54,8 @@ with tempfile.TemporaryDirectory(prefix='studypilot-protocol-') as tmp:
             config = rpc(peer, 'config/read', {'includeLayers': False})['config']
             assert all(config['features'].get(key) is False for key in ['apps', 'plugins', 'shell_tool', 'unified_exec', 'code_mode', 'code_mode_host', 'apply_patch_freeform'])
             assert config['web_search'] == 'disabled'
+            assert config['memories']['use_memories'] is False
+            assert config['memories']['generate_memories'] is False
             print('PASS: effective configuration disables apps, plugins, commands and web search', flush=True)
         print('PASS: two simultaneous processes have fresh, separate signed-out accounts', flush=True)
         tool = {'type': 'function', 'name': 'study_count_words', 'description': 'Count words only after student approval.', 'inputSchema': {'type': 'object', 'properties': {'file_id': {'type': 'string'}}, 'required': ['file_id'], 'additionalProperties': False}}
@@ -61,6 +63,17 @@ with tempfile.TemporaryDirectory(prefix='studypilot-protocol-') as tmp:
         for peer, home in zip(peers, homes):
             result = rpc(peer, 'thread/start', {'cwd': str(home/'Workspace'), 'sandbox': 'read-only', 'approvalPolicy': 'on-request', 'approvalsReviewer': 'user', 'dynamicTools': [tool]})
             threads.append(result['thread']['id'])
+        for peer, home in zip(peers, homes):
+            ephemeral = rpc(peer, 'thread/start', {'cwd': str(home/'Workspace'), 'ephemeral': True,
+                'sandbox': 'read-only', 'approvalPolicy': 'never', 'dynamicTools': [],
+                'baseInstructions': 'Use only the current request.',
+                'config': {'memories.use_memories': False, 'memories.generate_memories': False}})
+            ident = ephemeral['thread']['id']
+            assert ident not in threads
+            listed = rpc(peer, 'thread/list', {'cwd': str(home/'Workspace'), 'limit': 100})
+            assert ident not in [entry['id'] for entry in listed['data']]
+            rpc(peer, 'thread/unsubscribe', {'threadId': ident})
+        print('PASS: fresh memory-disabled ephemeral requests stay out of saved history', flush=True)
         assert threads[0] != threads[1]
         print('PASS: official dynamic tool registration and distinct conversations', flush=True)
         for i, peer in enumerate(peers):

@@ -160,3 +160,28 @@ is explicit and is not replaced by a claim that the full end-to-end account
 isolation suite has passed.
 
 Version 1.26.1 explicitly disables Codex apps, plugins, unified execution and code-mode hosts at launch; these integrations are not inherited from Codex defaults. StudyPilot also reads back the effective configuration and refuses to connect unless every restriction is confirmed. Only the registered, reviewed study tools are intended for this extension.
+
+## Alternative AI provider (1.27.0)
+
+Settings → AI model now offers **Codex · ChatGPT** alongside Apple Intelligence
+and optional Qwen. Connect your own account and choose an available Codex model
+there. Study chat, time estimates, planning advice and notebook questions route
+to this provider. Messages and the feature inputs described on screen go to
+OpenAI; this option requires an internet connection and account access.
+
+Provider requests use fresh ephemeral threads with no tools. The process and
+thread configuration disable both `memories.use_memories` and
+`memories.generate_memories`; the app verifies these settings before sending.
+They never resume the extension conversation or include earlier study-chat
+messages. Codex study-chat history is saved in a separate local file; seeing an
+old answer does not send it with your next request. Include needed details again
+for follow-ups. Calendar and saved-study context start off on provider selection
+and can be explicitly enabled in Context & sources. Attachments are explicit.
+Estimates use their displayed task input; planning advice uses the selected tasks
+and free-time totals; notebook answers use the selected excerpts. Existing schema
+validation and calendar review still gate changes.
+
+The signed-out protocol test verifies the memory-disabled configuration and that
+an ephemeral thread stays out of saved history. It makes no authenticated model
+turn, so real account access and answer quality still require user testing.
+Memory being disabled here is not a claim about OpenAI service retention.

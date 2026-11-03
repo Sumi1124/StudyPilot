@@ -49,13 +49,13 @@ enum NotebookSourceImport {
     private(set) var error: String?
     private var request: Task<Void, Never>?
     private var requestID: UUID?
-    func start(input: NotebookQuestion, model: ChatModelChoice, client: OllamaClient) {
+    func start(input: NotebookQuestion, model: ChatModelChoice, client: OllamaClient, codex: CodexExtensionService? = nil) {
         invalidate(); self.input = input; self.model = model; running = true
         let id = UUID(); requestID = id
         request = Task {
             defer { if requestID == id { running = false; request = nil; requestID = nil } }
             do {
-                let result = try await Self.generate(input: input, model: model, client: client)
+                let result = try await Self.generate(input: input, model: model, client: client, codex: codex)
                 try Task.checkCancellation()
                 guard requestID == id else { return }
                 answer = result
@@ -64,7 +64,12 @@ enum NotebookSourceImport {
     }
     func cancel() { requestID = nil; request?.cancel(); request = nil; running = false }
     func invalidate() { cancel(); answer = nil; input = nil; error = nil }
-    static func generate(input: NotebookQuestion, model: ChatModelChoice, client: OllamaClient) async throws -> NotebookAnswer {
+    static func generate(input: NotebookQuestion, model: ChatModelChoice, client: OllamaClient, codex: CodexExtensionService? = nil) async throws -> NotebookAnswer {
+        if model == .codex {
+            guard let codex else { throw PlanningError.invalid("Open AI model settings and connect Codex first.") }
+            let text = try await codex.generateStudyReply(prompt: input.prompt(), instructions: NotebookResearch.instructions, schema: NotebookResearch.schema)
+            return try NotebookAnswer.decode(text, input: input)
+        }
         if model == .qwen08 { return try await client.notebookAnswer(input: input) }
         #if canImport(FoundationModels)
         if #available(macOS 26, *) {

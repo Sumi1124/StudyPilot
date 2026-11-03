@@ -278,6 +278,7 @@ private struct NotebookWorkspace: View {
             VStack(alignment: .leading, spacing: 11) {
                 TextField("Ask about your sources…", text: $question, axis: .vertical).lineLimit(2...4).textFieldStyle(.plain).onSubmit(ask)
                 HStack(spacing: 10) {
+                    if chat.models.choice == .codex { Text("Selected excerpts are sent to OpenAI. Memory is off.").font(.caption2).foregroundStyle(.secondary) }
                     Text("\(included.count) sources · \(chat.models.choice.title)").font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                     Spacer()
                     Button("Find passages", action: findPassages).disabled(question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selected.isEmpty)
@@ -360,7 +361,7 @@ private struct NotebookWorkspace: View {
     }
     private func ask() {
         guard !controller.running, chat.unavailableReason == nil, !chat.generating else { return }
-        do { controller.start(input: try NotebookQuestion(question: question, passages: excerptContext), model: chat.models.choice, client: chat.models.client); savedAnswer = false }
+        do { controller.start(input: try NotebookQuestion(question: question, passages: excerptContext), model: chat.models.choice, client: chat.models.client, codex: chat.models.codex); savedAnswer = false }
         catch { self.error = error.localizedDescription }
     }
     private func findPassages() {
