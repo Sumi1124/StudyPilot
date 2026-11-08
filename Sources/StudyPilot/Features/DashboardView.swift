@@ -56,8 +56,8 @@ struct DashboardView: View {
             }.buttonStyle(.borderedProminent).controlSize(.large)
         }
         .padding(.horizontal, 24).padding(.vertical, 20)
-        .background(LinearGradient(colors: [Color.pilot.opacity(0.14), Color.pilotBlue.opacity(0.06)], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.pilot.opacity(0.18), lineWidth: 0.6))
+        .background(Color.pilot.opacity(0.09), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.pilot.opacity(0.16), lineWidth: 0.6))
     }
     private var daySummary: String {
         if overdue > 0 { return "\(overdue) overdue assignment\(overdue == 1 ? "" : "s") need your attention." }
@@ -110,30 +110,32 @@ struct DashboardView: View {
     }
     private var summary: some View {
         let minutes = DailyStudyProgress(sessions: sessions.map(\.record), goalMinutes: goalMinutes, now: app.now).minutes
-        return HStack(spacing: 0) {
-            summaryButton(value: dueToday, label: "Due today", filter: .today, tint: .pilot)
-            Divider().frame(height: 45)
-            summaryButton(value: overdue, label: "Overdue", filter: .overdue, tint: overdue > 0 ? .orange : .pilotBlue)
-            Divider().frame(height: 45)
+        let remaining = max(0, goalMinutes - minutes)
+        return HStack(alignment: .top, spacing: 14) {
+            summaryButton(value: dueToday, label: "Due today", filter: .today, tint: .primary, warm: false)
+            summaryButton(value: overdue, label: "Overdue", filter: .overdue, tint: .orange, warm: overdue > 0)
             Button { app.section = .focus } label: {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("FOCUS TODAY").font(.system(size: 10, weight: .semibold)).tracking(0.5).foregroundStyle(.secondary)
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text("\(minutes)").font(.system(size: 23, weight: .semibold)).monospacedDigit()
-                        Text("/ \(goalMinutes) min").font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("Focus today").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                        Spacer()
+                        Text("\(minutes) of \(goalMinutes) min").font(.caption).foregroundStyle(.secondary).monospacedDigit()
                     }
                     ProgressView(value: min(1, Double(minutes) / Double(max(1, goalMinutes)))).tint(Color.pilot)
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 20).contentShape(Rectangle())
-            }.buttonStyle(.plain)
-        }.padding(.vertical, 2).pilotCard(padding: 13)
+                    Text(remaining == 0 ? "Daily goal reached." : "\(remaining) minutes to reach your daily goal.").font(.caption).foregroundStyle(.secondary)
+                }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+            }.buttonStyle(.plain).pilotCard(padding: 18).layoutPriority(1)
+        }
     }
-    private func summaryButton(value: Int, label: String, filter: AssignmentTimeFilter, tint: Color) -> some View {
+    private func summaryButton(value: Int, label: String, filter: AssignmentTimeFilter, tint: Color, warm: Bool) -> some View {
         Button { app.assignmentTimeFilter = filter; app.section = .assignments } label: {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(label.uppercased()).font(.system(size: 10, weight: .semibold)).tracking(0.5).foregroundStyle(.secondary)
-                Text("\(value)").font(.system(size: 23, weight: .semibold)).monospacedDigit().foregroundStyle(tint)
-            }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 20).contentShape(Rectangle())
+            VStack(alignment: .leading, spacing: 8) {
+                Text(label).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                Text("\(value)").font(.system(size: 34, weight: .bold, design: .rounded)).monospacedDigit().foregroundStyle(warm ? tint : .primary)
+            }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
         }.buttonStyle(.plain).help("View assignments \(label)")
+            .pilotCard(padding: 18)
+            .background(warm ? tint.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
     private var notebookShelf: some View {
         VStack(alignment: .leading, spacing: 14) {
