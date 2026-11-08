@@ -142,19 +142,13 @@ extension Assignment {
 extension View {
     func pilotCard(padding: CGFloat = 16) -> some View {
         self.padding(padding)
-            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color(nsColor: .separatorColor).opacity(0.38), lineWidth: 0.6))
-            .shadow(color: .black.opacity(0.045), radius: 6, x: 0, y: 2)
+            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color(nsColor: .separatorColor).opacity(0.6), lineWidth: 0.5))
     }
 }
 struct PilotBackdrop: View {
     var body: some View {
-        ZStack(alignment: .top) {
-            Color.pilotCanvas
-            // A soft accent wash at the top gives pages depth without adding noise.
-            LinearGradient(colors: [Color.pilot.opacity(0.07), .clear], startPoint: .top, endPoint: .bottom)
-                .frame(height: 260)
-        }.ignoresSafeArea()
+        Color.pilotCanvas.ignoresSafeArea()
     }
 }
 struct PageHeading: View {
@@ -163,8 +157,8 @@ struct PageHeading: View {
     let subtitle: String
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            if !eyebrow.isEmpty { Text(eyebrow.uppercased()).font(.system(size: 10, weight: .semibold)).tracking(0.8).foregroundStyle(Color.pilot) }
-            Text(title).font(.system(size: 30, weight: .semibold, design: .rounded))
+            if !eyebrow.isEmpty { Text(eyebrow).font(.subheadline).foregroundStyle(.secondary) }
+            Text(title).font(.system(size: 28, weight: .semibold))
             if !subtitle.isEmpty { Text(subtitle).font(.callout).foregroundStyle(.secondary).padding(.top, 1) }
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -175,7 +169,7 @@ struct EmptyState: View {
     let message: String
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: symbol).font(.system(size: 27, weight: .medium)).foregroundStyle(Color.pilot).frame(width: 58, height: 58).background(Color.pilot.opacity(0.10), in: Circle())
+            Image(systemName: symbol).font(.system(size: 30, weight: .regular)).foregroundStyle(.tertiary)
             Text(title).font(.headline)
             Text(message).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 360)
         }.frame(maxWidth: .infinity).padding(40)

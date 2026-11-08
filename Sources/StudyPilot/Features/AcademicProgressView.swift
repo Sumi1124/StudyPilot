@@ -35,7 +35,7 @@ struct AcademicProgressView: View {
                         let value = StudyAnalytics.average(criterion, assessments: results.map(\.record))
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Criterion \(criterion.rawValue)").font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
-                            HStack(alignment: .firstTextBaseline, spacing: 3) { Text(value.map { String(format: "%.1f", $0) } ?? "—").font(.system(size: 34, weight: .semibold, design: .rounded)); Text("/ 8").foregroundStyle(.secondary) }
+                            HStack(alignment: .firstTextBaseline, spacing: 3) { Text(value.map { String(format: "%.1f", $0) } ?? "—").font(.system(size: 34, weight: .semibold)); Text("/ 8").foregroundStyle(.secondary) }
                             Text("Target \(selected?.target ?? 6) · recorded average").font(.system(size: 10)).foregroundStyle(.secondary)
                             if let value { SwiftUI.ProgressView(value: value, total: 8).tint(value >= Double(selected?.target ?? 6) ? Color(hex: "2B998C") : .pilot) }
                         }.frame(maxWidth: .infinity, alignment: .leading).pilotCard()

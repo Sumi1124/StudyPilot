@@ -177,7 +177,7 @@ struct ReviewSessionView: View {
                 Text("Card \(index + 1) of \(cards.count)").font(.caption.weight(.medium)).foregroundStyle(.secondary)
                 ScrollView {
                     VStack(spacing: 24) {
-                        Text(card.question).font(.system(size: 26, weight: .medium, design: .rounded)).multilineTextAlignment(.center).textSelection(.enabled)
+                        Text(card.question).font(.system(size: 26, weight: .medium)).multilineTextAlignment(.center).textSelection(.enabled)
                         if revealed { Divider(); MarkdownPreview(source: card.answer).frame(maxWidth: .infinity, alignment: .center) }
                     }.padding(25)
                 }.frame(maxWidth: .infinity, minHeight: 260).background(Color.pilot.opacity(0.04), in: RoundedRectangle(cornerRadius: 20))

@@ -36,20 +36,20 @@ struct TodayAgendaView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
-                Text("Agenda").font(.system(size: 17, weight: .semibold))
+                Text("Agenda").font(.headline)
                 Spacer()
                 Picker("Day", selection: $offset) { Text("Today").tag(0); Text("Tomorrow").tag(1) }.pickerStyle(.segmented).labelsHidden().frame(width: 160)
                 Button("Calendar") { app.openCalendar(day) }.buttonStyle(.link)
             }
             if !tasks.isEmpty {
-                HStack { Text("Due \(offset == 0 ? "today" : "tomorrow")").font(.system(size: 11, weight: .semibold)).tracking(0.6).textCase(.uppercase).foregroundStyle(.secondary); Spacer(); Text("\(tasks.count) task\(tasks.count == 1 ? "" : "s") · \(tasks.reduce(0) { $0 + $1.estimatedMinutes }) min estimated").font(.caption).foregroundStyle(.secondary) }
+                HStack { Text("Due \(offset == 0 ? "today" : "tomorrow")").font(.subheadline.weight(.medium)).foregroundStyle(.secondary); Spacer(); Text("\(tasks.count) task\(tasks.count == 1 ? "" : "s") · \(tasks.reduce(0) { $0 + $1.estimatedMinutes }) min estimated").font(.caption).foregroundStyle(.secondary) }
                 ForEach(tasks.prefix(6)) { task in
                     AssignmentRow(assignment: task, subject: subjects.first { $0.id == task.subjectID }) { editing = task }
                 }
                 if tasks.count > 6 { Button("View all \(tasks.count) assignments") { app.assignmentTimeFilter = offset == 0 ? .today : .tomorrow; app.section = .assignments } }
                 Divider()
             }
-            HStack { Text("Study schedule").font(.system(size: 11, weight: .semibold)).tracking(0.6).textCase(.uppercase).foregroundStyle(.secondary); Spacer(); if planning.hasAccess { Button("Refresh") { refresh() }.font(.caption) } }
+            HStack { Text("Study schedule").font(.subheadline.weight(.medium)).foregroundStyle(.secondary); Spacer(); if planning.hasAccess { Button("Refresh") { refresh() }.font(.caption) } }
             if localEvents.isEmpty && externalEvents.isEmpty {
                 HStack(spacing: 12) {
                     eventIcon("calendar.badge.plus")
@@ -84,8 +84,7 @@ struct TodayAgendaView: View {
             .task { if planning.hasAccess { refresh() } }
     }
     private func eventIcon(_ name: String) -> some View {
-        Image(systemName: name).font(.system(size: 12, weight: .medium)).foregroundStyle(Color.pilot)
-            .frame(width: 26, height: 26).background(Color.pilot.opacity(0.12), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+        Image(systemName: name).font(.system(size: 13)).foregroundStyle(.secondary).frame(width: 20)
     }
     private func cleanTitle(_ title: String) -> String {
         title.hasPrefix("Study: ") ? String(title.dropFirst(7)) : title
@@ -106,7 +105,7 @@ struct TodayAgendaView: View {
                 Image(systemName: expandedGroups.contains(id) ? "chevron.up" : "chevron.down")
                     .font(.caption2).foregroundStyle(.secondary)
             }.padding(.horizontal, 11).padding(.vertical, 10)
-                .background(Color.pilot.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).accessibilityLabel("\(title), \(count) study blocks, \(completed) completed. Show individual sessions")
     }
@@ -129,7 +128,7 @@ struct TodayAgendaView: View {
                 Button("Edit event") { editingEvent = event }
                 Button("Focus on this event") { if focus.state == nil { focus.start(minutes: min(60, max(5, event.durationMinutes)), subjectID: event.subjectID) }; app.section = .focus }
             } label: { Image(systemName: "ellipsis") }.menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 22).foregroundStyle(.secondary).accessibilityLabel("Actions for \(event.title)")
-        }.padding(.horizontal, 10).padding(.vertical, 7).background(Color.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }.padding(.vertical, 5)
     }
     private func externalRow(_ event: CalendarPlanningEvent, grouped: Bool) -> some View {
         HStack(spacing: 12) {
@@ -146,7 +145,7 @@ struct TodayAgendaView: View {
             Spacer()
             if let id = event.ownTaskID { FinishStudyTaskButton(taskID: id, title: event.title) }
             Menu { Button("Ask about this event") { app.ask("Help me with the calendar event \(event.title) on \(event.start.formatted(date: .abbreviated, time: .shortened)).") } } label: { Image(systemName: "ellipsis") }.menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 22).foregroundStyle(.secondary).accessibilityLabel("Actions for \(event.title)")
-        }.padding(.horizontal, 10).padding(.vertical, 7).background(Color.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }.padding(.vertical, 5)
     }
     private func refresh() { do { try planning.refresh(); refreshError = nil } catch { refreshError = error.localizedDescription } }
 }

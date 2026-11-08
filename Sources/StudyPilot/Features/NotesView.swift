@@ -120,7 +120,7 @@ struct NoteEditor: View {
                 Button("Make flashcards", systemImage: "rectangle.on.rectangle") { flashcards = true }
                 Picker("Mode", selection: $preview) { Text("Write").tag(false); Text("Preview").tag(true) }.pickerStyle(.segmented).frame(width: 160)
             }
-            TextField("Untitled note", text: $note.title).textFieldStyle(.plain).font(.system(size: 28, weight: .bold, design: .rounded))
+            TextField("Untitled note", text: $note.title).textFieldStyle(.plain).font(.system(size: 28, weight: .bold))
             HStack {
                 Picker("Notebook", selection: $note.notebookID) { Text("Unfiled").tag(nil as UUID?); ForEach(notebooks) { Text($0.title).tag(Optional($0.id)) } }
                 SubjectPicker(subjects: subjects, selection: $note.subjectID)

@@ -133,8 +133,8 @@ struct PlannerCalendarView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 18) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("YOUR SCHOOL WEEK").font(.system(size: 10, weight: .semibold)).tracking(0.8).foregroundStyle(Color.pilot)
-                    Text("Calendar").font(.system(size: 30, weight: .semibold, design: .rounded))
+                    Text("Your school week").font(.subheadline).foregroundStyle(.secondary)
+                    Text("Calendar").font(.system(size: 30, weight: .semibold))
                     Text("Deadlines, study blocks, and other commitments—kept separate.").font(.callout).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -209,7 +209,7 @@ struct PlannerCalendarView: View {
     private func statistic(_ title: String, value: String, symbol: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             Label(title, systemImage: symbol).font(.caption.weight(.semibold)).foregroundStyle(color)
-            Text(value).font(.system(size: 21, weight: .semibold, design: .rounded)).monospacedDigit()
+            Text(value).font(.system(size: 21, weight: .semibold)).monospacedDigit()
         }.padding(12).frame(maxWidth: .infinity, alignment: .leading).background(color.opacity(0.055), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
     private var grid: some View {
@@ -346,7 +346,7 @@ struct PlannerCalendarView: View {
     }
     private func timeBadge(_ date: Date, allDay: Bool) -> some View {
         Text(allDay ? "ALL DAY" : date.formatted(date: .omitted, time: .shortened))
-            .font(.system(size: allDay ? 8 : 10, weight: .semibold, design: .rounded)).monospacedDigit().foregroundStyle(Color.pilot)
+            .font(.system(size: allDay ? 8 : 10, weight: .semibold)).monospacedDigit().foregroundStyle(Color.pilot)
             .frame(width: 58).padding(.vertical, 6).background(Color.pilot.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
     }
     private func matches(_ title: String, subjectID: UUID? = nil) -> Bool { search.isEmpty || "\(title) \(subject(subjectID)?.name ?? "")".localizedStandardContains(search) }

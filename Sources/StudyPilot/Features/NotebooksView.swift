@@ -248,7 +248,7 @@ private struct NotebookWorkspace: View {
                         Text(controller.input?.question ?? "").font(.title3.weight(.medium)).textSelection(.enabled)
                         Text(answer.text).font(.system(size: 14)).lineSpacing(5).textSelection(.enabled)
                         if !answer.citations.isEmpty {
-                            Text("SOURCE PASSAGES").font(.caption2.weight(.semibold)).tracking(1).foregroundStyle(.secondary)
+                            Text("Source passages").font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
                             ForEach(Array(answer.citations.enumerated()), id: \.element.id) { index, citation in
                                 Button { open(citation) } label: {
                                     VStack(alignment: .leading, spacing: 9) {
