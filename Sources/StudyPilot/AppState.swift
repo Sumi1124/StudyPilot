@@ -140,16 +140,20 @@ extension Assignment {
     var progress: Double { PlannerLogic.progress(record) }
 }
 extension View {
-    func pilotCard() -> some View {
-        self.padding(16)
-            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(Color(nsColor: .separatorColor).opacity(0.42), lineWidth: 0.7))
+    func pilotCard(padding: CGFloat = 16) -> some View {
+        self.padding(padding)
+            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color(nsColor: .separatorColor).opacity(0.38), lineWidth: 0.6))
+            .shadow(color: .black.opacity(0.045), radius: 6, x: 0, y: 2)
     }
 }
 struct PilotBackdrop: View {
     var body: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             Color.pilotCanvas
+            // A soft accent wash at the top gives pages depth without adding noise.
+            LinearGradient(colors: [Color.pilot.opacity(0.07), .clear], startPoint: .top, endPoint: .bottom)
+                .frame(height: 260)
         }.ignoresSafeArea()
     }
 }

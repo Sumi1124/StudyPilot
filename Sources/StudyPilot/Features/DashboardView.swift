@@ -47,7 +47,7 @@ struct DashboardView: View {
         HStack(alignment: .center, spacing: 20) {
             VStack(alignment: .leading, spacing: 5) {
                 Text(app.now, format: .dateTime.weekday(.wide).month(.wide).day()).font(.system(size: 11, weight: .semibold)).tracking(0.8).textCase(.uppercase).foregroundStyle(Color.pilot)
-                Text("Today").font(.system(size: 32, weight: .semibold))
+                Text("Today").font(.system(size: 34, weight: .bold, design: .rounded))
                 Text(daySummary).font(.callout).foregroundStyle(.secondary).lineLimit(2)
             }.frame(maxWidth: .infinity, alignment: .leading)
             Button(focus.state == nil ? "Start focus" : "Return to focus", systemImage: "timer") {
@@ -55,9 +55,9 @@ struct DashboardView: View {
                 app.section = .focus
             }.buttonStyle(.borderedProminent).controlSize(.large)
         }
-        .padding(.horizontal, 22).padding(.vertical, 18)
-        .background(Color.pilot.opacity(0.085), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(Color.pilot.opacity(0.13), lineWidth: 0.7))
+        .padding(.horizontal, 24).padding(.vertical, 20)
+        .background(LinearGradient(colors: [Color.pilot.opacity(0.14), Color.pilotBlue.opacity(0.06)], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.pilot.opacity(0.18), lineWidth: 0.6))
     }
     private var daySummary: String {
         if overdue > 0 { return "\(overdue) overdue assignment\(overdue == 1 ? "" : "s") need your attention." }
@@ -125,8 +125,7 @@ struct DashboardView: View {
                     ProgressView(value: min(1, Double(minutes) / Double(max(1, goalMinutes)))).tint(Color.pilot)
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 20).contentShape(Rectangle())
             }.buttonStyle(.plain)
-        }.padding(.vertical, 13).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 13))
-            .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color(nsColor: .separatorColor).opacity(0.42), lineWidth: 0.7))
+        }.padding(.vertical, 2).pilotCard(padding: 13)
     }
     private func summaryButton(value: Int, label: String, filter: AssignmentTimeFilter, tint: Color) -> some View {
         Button { app.assignmentTimeFilter = filter; app.section = .assignments } label: {
@@ -169,9 +168,11 @@ struct WorkloadWeekView: View {
                     Button { app.openCalendar(day.date) } label: {
                         VStack(spacing: 5) {
                             Text(day.minutes == 0 ? "—" : "\(day.minutes)").font(.system(size: 10)).monospacedDigit().foregroundStyle(.secondary)
-                            Capsule().fill(LinearGradient(colors: [Color.pilot.opacity(day.minutes == 0 ? 0.12 : 0.9), Color.pilotBlue.opacity(day.minutes == 0 ? 0.08 : 0.62)], startPoint: .bottom, endPoint: .top)).frame(width: 15, height: max(3, 48 * Double(day.minutes) / Double(max(1, days.map(\.minutes).max() ?? 1))))
+                            Capsule().fill(LinearGradient(colors: [Color.pilot.opacity(day.minutes == 0 ? 0.12 : 0.9), Color.pilotBlue.opacity(day.minutes == 0 ? 0.08 : 0.62)], startPoint: .bottom, endPoint: .top)).frame(width: 18, height: max(4, 48 * Double(day.minutes) / Double(max(1, days.map(\.minutes).max() ?? 1))))
                             Text(day.date, format: .dateTime.weekday(.abbreviated)).font(.system(size: 10)).foregroundStyle(.secondary)
-                            Text(day.date, format: .dateTime.day()).font(.system(size: 11, weight: .medium)).foregroundStyle(.primary)
+                            let isToday = Calendar.current.isDate(day.date, inSameDayAs: now)
+                            Text(day.date, format: .dateTime.day()).font(.system(size: 11, weight: isToday ? .bold : .medium)).foregroundStyle(isToday ? Color.white : .primary)
+                                .frame(width: 22, height: 22).background(isToday ? Color.pilot : .clear, in: Circle())
                         }.frame(maxWidth: .infinity).contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityLabel("\(day.date.formatted(date: .complete, time: .omitted)), \(day.count) assignments, \(day.minutes) estimated minutes")
                 }
