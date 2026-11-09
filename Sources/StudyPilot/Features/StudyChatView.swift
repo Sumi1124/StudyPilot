@@ -81,11 +81,16 @@ struct StudyChatView: View {
             }
             Text(chat.calendar.connectionSummary).font(.caption).foregroundStyle(.secondary)
             Text("Workspace facts come directly from saved records. AI explanations may need checking.").font(.caption).foregroundStyle(.secondary)
-            HStack(spacing: 8) {
-                Button("What’s left?") { draft = "What tasks do I have left?" }
-                Button("Due today") { draft = "What tasks are due today?" }
-                Button("Overdue") { draft = "Which tasks are overdue?" }
-                Button("My calendar") { draft = "What is on my calendar today?" }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    Button("What’s left?") { draft = "What tasks do I have left?" }
+                    Button("Start with…") { draft = "What should I work on first?" }
+                    Button("Due today") { draft = "What tasks are due today?" }
+                    Button("This week") { draft = "What tasks are due this week?" }
+                    Button("Overdue") { draft = "Which tasks are overdue?" }
+                    Button("Workload") { draft = "How much work do I have left?" }
+                    Button("My calendar") { draft = "What is on my calendar today?" }
+                }
             }.font(.caption).disabled(chat.generating)
         }.padding(20)
     }
