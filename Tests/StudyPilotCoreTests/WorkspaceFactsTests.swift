@@ -15,7 +15,7 @@ private func factTasks() -> [WorkspaceFactTask] {
     #expect(WorkspaceFacts.request("What's on my calendar tomorrow?") == .calendar(1))
     #expect(WorkspaceFacts.request("What about science?", followingWorkspaceAnswer: true, previousScope: "today") == .tasksToday)
     #expect(WorkspaceFacts.request("Science tasks tomorrow", followingWorkspaceAnswer: true, previousScope: "today") == .tasksTomorrow)
-    for text in ["Explain quadratic equations", "Move my math session tomorrow", "What is a deadline?", "What tasks are due this week?", "When can I do my math task?", "Show completed tasks"] { #expect(WorkspaceFacts.request(text) == nil) }
+    for text in ["Explain quadratic equations", "Move my math session tomorrow", "What is a deadline?", "What tasks are due next week?", "What was due last Friday?", "What is due in 3 days?", "When can I do my math task?", "Show completed tasks"] { #expect(WorkspaceFacts.request(text) == nil) }
 }
 @Test func todaysFactsUseExactDayBoundariesAndExcludeCompletedAssignments() {
     let answer = WorkspaceFacts.taskAnswer(.tasksToday, tasks: factTasks(), now: factDate(26, 12), calendar: factCalendar)!
@@ -93,7 +93,8 @@ private func factTasks() -> [WorkspaceFactTask] {
 }
 @Test func unrecognizedCalendarQualifiersAreNotMisreportedAsExactEmptyResults() {
     #expect(WorkspaceFacts.request("Is there anything on my calendar today?") == nil)
-    #expect(WorkspaceFacts.request("Show urgent tasks") == nil)
+    #expect(WorkspaceFacts.request("What's on my calendar this week?") == nil)
+    #expect(WorkspaceFacts.request("What's on my calendar Friday?") == nil)
     #expect(WorkspaceFacts.request("What's on my calendar today?") == .calendar(0))
 }
 @Test func anUnanchoredPronounDoesNotBecomeAnExactAnswerAboutEveryTask() {
@@ -101,7 +102,7 @@ private func factTasks() -> [WorkspaceFactTask] {
 }
 
 @Test func remainingWorkQuestionsUseActualUnfinishedRecords() throws {
-    for text in ["What task do I have left?", "What tasks do I have left?", "What do I need to do?", "What is needed to be done?", "What should I work on?", "Remind me what I need to get done", "Remind me of my tasks", "What homework is still outstanding?"] {
+    for text in ["What task do I have left?", "What tasks do I have left?", "What do I need to do?", "What is needed to be done?", "Remind me what I need to get done", "Remind me of my tasks", "What homework is still outstanding?"] {
         let request = try #require(WorkspaceFacts.request(text))
         #expect(WorkspaceFacts.needsWorkspaceContext(text))
         let answer = try #require(WorkspaceFacts.taskAnswer(request, tasks: factTasks(), now: factDate(26, 12), calendar: factCalendar, query: text))
@@ -114,4 +115,107 @@ private func factTasks() -> [WorkspaceFactTask] {
         #expect(WorkspaceFacts.request(text) == nil)
     }
     #expect(!WorkspaceFacts.needsWorkspaceContext("Explain quadratic equations"))
+}
+
+@Test func weekWeekdayPriorityAndWorkloadQuestionsRouteToExactAnswers() {
+    #expect(WorkspaceFacts.request("What tasks are due this week?") == .tasksThisWeek)
+    #expect(WorkspaceFacts.request("What homework is due in the next 7 days?") == .tasksThisWeek)
+    #expect(WorkspaceFacts.request("What's due Friday?") == .tasksOnWeekday(6))
+    #expect(WorkspaceFacts.request("Which math tasks are due on Monday?") == .tasksOnWeekday(2))
+    for text in ["What should I work on first?", "What should I work on?", "Show urgent tasks", "Which assignment is most urgent?"] { #expect(WorkspaceFacts.request(text) == .nextUp) }
+    for text in ["How much work do I have left?", "How many tasks do I have left?", "How long will my homework take?", "What is my workload?"] { #expect(WorkspaceFacts.request(text) == .workload) }
+    for text in ["What tasks do I have left?", "What's left?", "What homework is still outstanding?"] { #expect(WorkspaceFacts.request(text) == .overview) }
+    #expect(WorkspaceFacts.request("How many tasks are due today?") == .tasksToday)
+    #expect(WorkspaceFacts.request("Which tasks are overdue this week?") == .overdue)
+    // Tutoring and unrelated questions that merely share a phrase stay with the assistant.
+    for text in ["What do I do next in this equation?", "How long is the essay?", "How much is 12 times 8?", "Why is this urgent?", "What should I do about my essay introduction?", "How many days until my deadline?"] { #expect(WorkspaceFacts.request(text) == nil) }
+}
+@Test func everyRequestScopeRoundTripsExceptFreeTextSearches() {
+    let all: [WorkspaceFactRequest] = [.tasksToday, .tasksTomorrow, .overdue, .nextDeadline, .calendar(0), .calendar(1), .tasksThisWeek, .tasksOnWeekday(1), .tasksOnWeekday(7), .overview, .nextUp, .workload]
+    for request in all { #expect(WorkspaceFactRequest(scope: request.scope) == request) }
+    for scope in ["tasks", "weekday:0", "weekday:8", "weekday:x", "calendar:5", ""] { #expect(WorkspaceFactRequest(scope: scope) == nil) }
+}
+@Test func followupsKeepNewScopesButANewIntentReplacesThem() {
+    #expect(WorkspaceFacts.request("What about science?", followingWorkspaceAnswer: true, previousScope: "overview") == .overview)
+    #expect(WorkspaceFacts.request("What about math?", followingWorkspaceAnswer: true, previousScope: "week") == .tasksThisWeek)
+    #expect(WorkspaceFacts.request("What about science?", followingWorkspaceAnswer: true, previousScope: "weekday:6") == .tasksOnWeekday(6))
+    #expect(WorkspaceFacts.request("Which one should I do first?", followingWorkspaceAnswer: true, previousScope: "overview") == .nextUp)
+    let sources = [StudyChatSource(id: "a", title: "Essay", detail: "", kind: "assignment"), StudyChatSource(id: "b", title: "Trigonometry", detail: "", kind: "assignment")]
+    #expect(WorkspaceFacts.followupQuery("Which one should I do first?", sources: sources) == "Which one should I do first?")
+    #expect(WorkspaceFacts.followupQuery("When is it due?", sources: sources) == nil)
+}
+@Test func overviewGroupsUnfinishedWorkByUrgencyWithTotals() throws {
+    let answer = try #require(WorkspaceFacts.taskAnswer(.overview, tasks: factTasks(), now: factDate(26, 12), calendar: factCalendar))
+    #expect(answer.sources.map(\.title) == ["Essay", "Photosynthesis lab", "Quadratic equations", "Trigonometry"])
+    #expect(answer.text.hasPrefix("4 unfinished StudyPilot assignments left · about 2 h 35 min of estimated work:"))
+    for heading in ["Overdue (1):", "Due today (2):", "Due tomorrow (1):"] { #expect(answer.text.contains(heading)) }
+    #expect(!answer.text.contains("Next 7 days")); #expect(!answer.text.contains("Later"))
+    let order = ["Overdue (1)", "Due today (2)", "Due tomorrow (1)", "Suggested start: Essay — it is 1 day overdue."].map { answer.text.range(of: $0)!.lowerBound }
+    #expect(order == order.sorted())
+    #expect(!answer.text.contains("Already finished"))
+    let math = try #require(WorkspaceFacts.taskAnswer(.overview, tasks: factTasks(), now: factDate(26, 12), calendar: factCalendar, query: "What math tasks do I have left?"))
+    #expect(math.sources.map(\.title) == ["Quadratic equations", "Trigonometry"]); #expect(math.text.contains("matching your question"))
+}
+@Test func longOverviewsAreCappedAndSayHowManyAreShown() throws {
+    let many = (0..<15).map { WorkspaceFactTask(record: .init(title: "Task \($0)", dueDate: factDate(27 + $0 % 3, 9), estimatedMinutes: 10), subject: "") }
+    let answer = try #require(WorkspaceFacts.taskAnswer(.overview, tasks: many, now: factDate(26, 12), calendar: factCalendar))
+    #expect(answer.sources.count == 12); #expect(answer.text.contains("15 unfinished StudyPilot assignments left")); #expect(answer.text.contains("Showing the first 12."))
+}
+@Test func startingPointPutsOverdueFirstThenWeighsPriorityAgainstDeadline() throws {
+    var tasks = factTasks()
+    let first = try #require(WorkspaceFacts.taskAnswer(.nextUp, tasks: tasks, now: factDate(26, 12), calendar: factCalendar))
+    #expect(first.sources.map(\.title) == ["Essay", "Photosynthesis lab", "Quadratic equations"])
+    #expect(first.text.hasPrefix("Start with Essay — it is 1 day overdue. It should take about 20 min."))
+    #expect(first.text.contains("2. Photosynthesis lab — it is due in 4 h")); #expect(first.text.contains("from 4 unfinished StudyPilot assignments"))
+    // A high-priority task due tomorrow outranks normal work due later today, but never overdue work.
+    tasks[1] = .init(record: .init(title: "Trigonometry", dueDate: factDate(27, 10), priority: 2, estimatedMinutes: 30, checklist: [.init(title: "Read notes", isComplete: true), .init(title: "Practice set B")]), subject: "Mathematics")
+    let ranked = WorkspaceFacts.startingOrder(tasks.filter { $0.record.status != TaskStatus.done.rawValue }, now: factDate(26, 12)).map(\.record.title)
+    #expect(ranked == ["Essay", "Trigonometry", "Photosynthesis lab", "Quadratic equations"])
+    let math = try #require(WorkspaceFacts.taskAnswer(.nextUp, tasks: tasks, now: factDate(26, 12), calendar: factCalendar, query: "Which math task should I do first?"))
+    #expect(math.text.hasPrefix("Start with Trigonometry — it is high priority and due tomorrow. It should take about 30 min. Next step: Practice set B."))
+    #expect(math.sources.first?.detail.contains("1/2 steps done") == true); #expect(math.sources.first?.detail.contains("high priority") == true)
+    let low = WorkspaceFactTask(record: .init(title: "Low", dueDate: factDate(26, 11), priority: 0), subject: "")
+    #expect(WorkspaceFacts.startingOrder([tasks[2], low], now: factDate(26, 12)).first?.record.title == "Low")
+}
+@Test func workloadTotalsCountLocalEstimatesOnlyAndExcludeCompletedWork() throws {
+    let source = StudyChatSource(id: "calendar:quiz", title: "History quiz", detail: "Calendar deadline; completion not tracked", kind: "calendar", date: factDate(29, 9))
+    let tasks = factTasks() + [WorkspaceFactTask(record: .init(title: "History quiz", dueDate: factDate(29, 9)), subject: "", calendarSource: source)]
+    let answer = try #require(WorkspaceFacts.taskAnswer(.workload, tasks: tasks, now: factDate(26, 12), calendar: factCalendar))
+    #expect(answer.text.hasPrefix("5 assignment/deadline items left · about 2 h 35 min of estimated work."))
+    for row in ["• Overdue: 1 · 20 min", "• Due today: 2 · 1 h 45 min", "• Due tomorrow: 1 · 30 min", "• Next 7 days: 1\n"] { #expect(answer.text.contains(row)) }
+    #expect(answer.text.contains("Completion is not tracked")); #expect(answer.sources.count == 5)
+}
+@Test func weekAndWeekdayListsUseHalfOpenCalendarDays() throws {
+    // 26 October 2026 is a Monday.
+    let later = WorkspaceFactTask(record: .init(title: "Next Monday", dueDate: factDate(2, 0).addingTimeInterval(31 * 86_400)), subject: "")
+    let friday = WorkspaceFactTask(record: .init(title: "Friday report", dueDate: factDate(30, 15)), subject: "")
+    let tasks = factTasks() + [later, friday], now = factDate(26, 12)
+    let week = try #require(WorkspaceFacts.taskAnswer(.tasksThisWeek, tasks: tasks, now: now, calendar: factCalendar))
+    #expect(week.sources.map(\.title) == ["Photosynthesis lab", "Quadratic equations", "Trigonometry", "Friday report"])
+    #expect(week.text.contains("due in the next 7 days")); #expect(week.text.contains("1 overdue item also needs attention."))
+    let onFriday = try #require(WorkspaceFacts.taskAnswer(.tasksOnWeekday(6), tasks: tasks, now: now, calendar: factCalendar))
+    #expect(onFriday.sources.map(\.title) == ["Friday report"]); #expect(onFriday.text.contains("due on Friday"))
+    // Asking for today's weekday means today, not a week from now.
+    #expect(WorkspaceFacts.taskAnswer(.tasksOnWeekday(2), tasks: tasks, now: now, calendar: factCalendar)?.sources.map(\.title) == ["Photosynthesis lab", "Quadratic equations"])
+    let empty = try #require(WorkspaceFacts.taskAnswer(.tasksOnWeekday(5), tasks: tasks, now: now, calendar: factCalendar))
+    #expect(empty.sources.isEmpty); #expect(empty.text.contains("1 overdue item still needs attention.")); #expect(empty.text.contains("Next deadline: Photosynthesis lab (in 4 h)."))
+}
+@Test func emptyWorkspacesGetAPlainAnswerInsteadOfACrash() throws {
+    for request in [WorkspaceFactRequest.overview, .nextUp, .workload, .tasksThisWeek, .tasksOnWeekday(3), .overdue] {
+        let answer = try #require(WorkspaceFacts.taskAnswer(request, tasks: [factTasks()[4]], now: factDate(26, 12), calendar: factCalendar))
+        #expect(answer.sources.isEmpty); #expect(answer.text.hasPrefix("No unfinished StudyPilot assignments or selected calendar deadlines"))
+    }
+    #expect(WorkspaceFacts.taskAnswer(.calendar(0), tasks: factTasks(), now: factDate(26, 12), calendar: factCalendar) == nil)
+}
+@Test func durationsAndRelativeDeadlinesReadNaturally() {
+    #expect([0, 45, 60, 90, 155, -5].map(WorkspaceFacts.duration) == ["0 min", "45 min", "1 h", "1 h 30 min", "2 h 35 min", "0 min"])
+    let now = factDate(26, 12)
+    func relative(_ date: Date) -> String { WorkspaceFacts.relativeDue(date, now: now, calendar: factCalendar) }
+    #expect(relative(now.addingTimeInterval(-20)) == "1 min overdue"); #expect(relative(factDate(26, 9)) == "3 h overdue")
+    #expect(relative(factDate(25, 23)) == "1 day overdue"); #expect(relative(factDate(20, 12)) == "6 days overdue")
+    #expect(relative(now.addingTimeInterval(30 * 60)) == "in 30 min"); #expect(relative(factDate(26, 18)) == "in 6 h")
+    #expect(relative(factDate(27, 1)) == "tomorrow"); #expect(relative(factDate(29, 0)) == "in 3 days")
+    var cal = factCalendar; cal.timeZone = TimeZone(identifier: "America/New_York")!
+    let beforeChange = cal.date(from: DateComponents(year: 2026, month: 10, day: 31, hour: 23))!, after = cal.date(from: DateComponents(year: 2026, month: 11, day: 2, hour: 0, minute: 30))!
+    #expect(WorkspaceFacts.relativeDue(after, now: beforeChange, calendar: cal) == "in 2 days")
 }

@@ -1,5 +1,16 @@
 # In-app updates
 
+## Smarter “What’s left?” answers (1.29.0)
+
+- “What tasks do I have left?” now returns a grouped overview: Overdue, Due today, Due tomorrow, Next 7 days and Later, with a total of the saved time estimates and a suggested starting point.
+- “What should I work on first?” ranks unfinished work. Overdue items come first, then the nearest deadline; high priority counts as a day sooner and low priority a day later. The answer names the first unchecked checklist step when one exists.
+- “How much work do I have left?” gives the number of unfinished items and estimated time for each urgency group.
+- “What’s due this week?” (the next 7 days) and a single weekday such as “What’s due Friday?” are answered directly from saved records. Next week, past weeks, “next Friday” and calendar-range questions still go to the assistant instead of receiving a guessed exact answer.
+- Every listed assignment shows how far away its deadline is, its time estimate, checklist progress and high priority. Date-specific lists mention overdue work they leave out, and an empty result names the next deadline.
+- Follow-ups such as “What about math?” keep the new scopes, and “Which one should I do first?” applies to the whole list.
+- AI chat has shortcuts for Start with…, This week and Workload.
+- Time totals use StudyPilot assignment estimates only. Selected calendar deadlines are counted but have no estimate, and their completion is still shown as not tracked.
+
 ## Live calendar and unfinished-task answers (1.28.0)
 
 - “What tasks do I have left?” and similar reminders now read actual unfinished assignments and selected calendar deadlines directly, excluding completed local work.
