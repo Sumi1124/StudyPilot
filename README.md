@@ -52,6 +52,8 @@ New in **1.23.1**: completed focus time earns food tickets. Each 25 minutes gran
 
 Companion features: the companion reacts when you feed, play, or rest. Choose from three snacks for one ticket each, and watch its appearance change as it grows from Hatchling to Explorer to Study buddy.
 
+New in **1.29.1**: flashcard review no longer skips due cards, the quick-add deadline stays current, assignment rows show the time left, and chat answers questions such as “Is anything overdue?” directly.
+
 New in **1.29.0**, “What tasks do I have left?” groups unfinished work into Overdue, Today, Tomorrow, Next 7 days and Later with estimated time. Ask “What should I work on first?” for a ranked starting point, “How much work do I have left?” for totals, or “What’s due this week?” and “What’s due Friday?” for date lists. These answers come directly from saved records.
 
 New in **1.28.0**, ask “What tasks do I have left?” to see current unfinished assignments and selected calendar deadlines. Live calendar and task context works with Codex independently of chat memory, and the assistant shows whether a calendar needs connecting or selecting.

@@ -219,3 +219,24 @@ private func factTasks() -> [WorkspaceFactTask] {
     let beforeChange = cal.date(from: DateComponents(year: 2026, month: 10, day: 31, hour: 23))!, after = cal.date(from: DateComponents(year: 2026, month: 11, day: 2, hour: 0, minute: 30))!
     #expect(WorkspaceFacts.relativeDue(after, now: beforeChange, calendar: cal) == "in 2 days")
 }
+@Test func everydayFillerWordsStillGetDirectAnswers() {
+    #expect(WorkspaceFacts.request("Is anything overdue?") == .overdue)
+    #expect(WorkspaceFacts.request("Anything due tomorrow?") == .tasksTomorrow)
+    #expect(WorkspaceFacts.request("Is there any homework due today?") == .tasksToday)
+    #expect(WorkspaceFacts.request("What's due tonight?") == .tasksToday)
+    #expect(WorkspaceFacts.request("What am I supposed to do today?") == .tasksToday)
+    #expect(WorkspaceFacts.request("What have I got to do?") == .overview)
+    #expect(WorkspaceFacts.request("What's on my calendar tonight?") == .calendar(0))
+    // Clock times and tutoring still go to the assistant.
+    #expect(WorkspaceFacts.request("What's due at 9 am tomorrow?") == nil)
+    #expect(WorkspaceFacts.request("What is due before 5 pm?") == nil)
+    #expect(WorkspaceFacts.request("Explain anything about photosynthesis") == nil)
+    #expect(WorkspaceFacts.request("Is there any life on Mars?") == nil)
+}
+@Test func deadlinesJustAfterMidnightSayHowSoonTheyAre() {
+    let lateEvening = factDate(26, 23)
+    #expect(WorkspaceFacts.relativeDue(lateEvening.addingTimeInterval(90 * 60), now: lateEvening, calendar: factCalendar) == "tomorrow, in 1 h")
+    #expect(WorkspaceFacts.relativeDue(lateEvening.addingTimeInterval(65 * 60), now: lateEvening, calendar: factCalendar) == "tomorrow, in 1 h")
+    #expect(WorkspaceFacts.relativeDue(lateEvening.addingTimeInterval(51 * 60), now: lateEvening, calendar: factCalendar) == "in 51 min")
+    #expect(WorkspaceFacts.relativeDue(factDate(27, 12), now: lateEvening, calendar: factCalendar) == "tomorrow")
+}

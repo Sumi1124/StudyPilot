@@ -10,6 +10,8 @@ struct QuickTaskEntry: View {
     var compact = false
     @State private var title = ""
     @State private var due = TodayWorkspace.defaultDeadline(now: Date())
+    /// False until the student picks a deadline, so an untouched default can follow the clock.
+    @State private var dueEdited = false
     @State private var subjectID: UUID?
     @State private var minutes = 30
     @State private var saved: String?
@@ -18,7 +20,7 @@ struct QuickTaskEntry: View {
             HStack { Text("New assignment").font(.system(size: 13, weight: .semibold)); Spacer(); Button("More…") { app.showingAssignment = true }.font(.caption).buttonStyle(.link) }
             if compact {
                 TextField("Assignment title", text: $title).textFieldStyle(.roundedBorder).onSubmit(add)
-                DatePicker("Due", selection: $due).font(.caption)
+                DatePicker("Due", selection: dueSelection).font(.caption)
                 SubjectPicker(subjects: subjects, selection: $subjectID).font(.caption)
                 effort.font(.caption)
                 Button("Add assignment", systemImage: "plus", action: add).frame(maxWidth: .infinity).buttonStyle(.borderedProminent).disabled(invalid)
@@ -34,6 +36,14 @@ struct QuickTaskEntry: View {
             }
             if let saved { Text(saved).font(.caption).foregroundStyle(.secondary) }
         }
+        .onAppear { refreshDefaultDue() }
+        .onChange(of: app.now) { refreshDefaultDue() }
+    }
+    private var dueSelection: Binding<Date> { Binding(get: { due }, set: { due = $0; dueEdited = true }) }
+    /// The suggested deadline is computed when this card first appears. Without this, a window left
+    /// open overnight kept offering yesterday evening and new assignments started out overdue.
+    private func refreshDefaultDue() {
+        if !dueEdited && due <= Date() { due = TodayWorkspace.defaultDeadline(now: Date()) }
     }
     private var invalid: Bool { title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || title.count > 500 || !(5...100_000).contains(minutes) }
     private var effort: some View {
@@ -43,7 +53,7 @@ struct QuickTaskEntry: View {
         }
     }
     @ViewBuilder private var fields: some View {
-        DatePicker("Due", selection: $due).fixedSize()
+        DatePicker("Due", selection: dueSelection).fixedSize()
         SubjectPicker(subjects: subjects, selection: $subjectID).frame(maxWidth: 210)
         effort.frame(width: 145)
     }
@@ -52,7 +62,7 @@ struct QuickTaskEntry: View {
         guard !invalid else { return }
         let item = Assignment(AssignmentRecord(title: clean, subjectID: subjectID, dueDate: due, estimatedMinutes: minutes))
         context.insert(item)
-        do { try context.save(); title = ""; saved = "Added \(clean)." }
+        do { try context.save(); title = ""; saved = "Added \(clean)."; dueEdited = false; refreshDefaultDue() }
         catch { context.delete(item); app.error = "The task could not be saved: \(error.localizedDescription)" }
     }
 }

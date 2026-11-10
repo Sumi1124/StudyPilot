@@ -42,7 +42,7 @@ struct TodayAgendaView: View {
                 Button("Calendar") { app.openCalendar(day) }.buttonStyle(.link)
             }
             if !tasks.isEmpty {
-                HStack { Text("Due \(offset == 0 ? "today" : "tomorrow")").font(.system(size: 13, weight: .semibold)); Spacer(); Text("\(tasks.count) task\(tasks.count == 1 ? "" : "s") · \(tasks.reduce(0) { $0 + $1.estimatedMinutes }) min estimated").font(.caption).foregroundStyle(.secondary) }
+                HStack { Text("Due \(offset == 0 ? "today" : "tomorrow")").font(.system(size: 13, weight: .semibold)); Spacer(); Text("\(tasks.count) task\(tasks.count == 1 ? "" : "s") · \(WorkspaceFacts.duration(tasks.reduce(0) { $0 + $1.estimatedMinutes })) estimated").font(.caption).foregroundStyle(.secondary) }
                 ForEach(tasks.prefix(6)) { task in
                     AssignmentRow(assignment: task, subject: subjects.first { $0.id == task.subjectID }) { editing = task }
                 }

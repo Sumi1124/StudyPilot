@@ -117,7 +117,7 @@ struct AssignmentsView: View {
         return HStack(spacing: 12) {
             ibStat("Open IB work", value: "\(relevant.count)", symbol: "books.vertical")
             ibStat("Due this week", value: "\(relevant.filter { $0.dueDate <= Date().addingTimeInterval(7 * 86400) }.count)", symbol: "calendar")
-            ibStat("Study time left", value: "\(relevant.reduce(0) { $0 + $1.estimatedMinutes }) min", symbol: "timer")
+            ibStat("Study time left", value: WorkspaceFacts.duration(relevant.reduce(0) { $0 + $1.estimatedMinutes }), symbol: "timer")
         }
     }
     private func ibStat(_ title: String, value: String, symbol: String) -> some View {
@@ -129,7 +129,7 @@ struct AssignmentsView: View {
     private func applyBulk(_ action: AssignmentBulkAction) {
         let updates = AssignmentActions.updates(records: assignments.map(\.record), selectedIDs: selectedIDs, visibleIDs: Set(filtered.map(\.id)), action: action, now: Date())
         for record in updates { assignments.first { $0.id == record.id }?.apply(record) }
-        if app.save(context, completionChanges: updates) { bulkMessage = "Updated \(updates.count) assignments."; selectedIDs.removeAll() }
+        if app.save(context, completionChanges: updates) { bulkMessage = updates.isEmpty ? "Nothing needed changing." : "Updated \(updates.count) assignment\(updates.count == 1 ? "" : "s")."; selectedIDs.removeAll() }
         else { context.rollback(); bulkMessage = "Changes could not be saved. Please try again." }
     }
     private func openSelection() {
@@ -173,6 +173,7 @@ struct AssignmentRow: View {
             } label: { Image(systemName: "timer") }.menuStyle(.borderlessButton).frame(width: 28).help("Focus on this subject")
             VStack(alignment: .trailing, spacing: 6) {
                 Text(assignment.dueDate, format: .dateTime.month(.abbreviated).day().hour().minute()).font(.caption).foregroundStyle(PlannerLogic.isOverdue(assignment.record, at: app.now) ? .red : .secondary)
+                if !assignment.isDone { Text(WorkspaceFacts.relativeDue(assignment.dueDate, now: app.now)).font(.system(size: 10, weight: .medium)).foregroundStyle(PlannerLogic.isOverdue(assignment.record, at: app.now) ? .red : .secondary) }
                 HStack(spacing: 6) {
                     if assignment.priority == 2 { Text("High priority").foregroundStyle(.orange) }
                     Text(assignment.status).foregroundStyle(.secondary)

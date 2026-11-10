@@ -53,7 +53,7 @@ public enum WorkspaceFacts {
     }
     private static func asksRemainingWork(_ text: String) -> Bool {
         let value = StudyUnderstanding.tokens(text).joined(separator: " ")
-        return ["what do i need to do", "what should i do", "what is left", "what s left", "what do i have left", "what i need to do", "what needs to be done", "what do i need to get done", "what i need to get done", "what is needed to be done", "what do i have to do", "what should i work on"].contains { value.contains($0) }
+        return ["what do i need to do", "what should i do", "what is left", "what s left", "what do i have left", "what i need to do", "what needs to be done", "what do i need to get done", "what i need to get done", "what is needed to be done", "what do i have to do", "what should i work on", "what am i supposed to do", "what have i got to do"].contains { value.contains($0) }
     }
     /// “Where do I start?” questions. Callers still require a task word or an otherwise generic question.
     private static func asksPriority(_ text: String) -> Bool {
@@ -82,7 +82,7 @@ public enum WorkspaceFacts {
             if calendarWords || (wantsWeek && weekday != nil) || weekdayNames.filter({ words.contains($0) }).count > 1 { return nil }
             if !words.isDisjoint(with: ["last", "every", "each"]) || (words.contains("next") && !sevenDays) { return nil }
         }
-        if !words.isDisjoint(with: ["am", "pm"]) || ((!words.isDisjoint(with: ["at", "before", "after"])) && words.contains(where: { Int($0) != nil })) { return nil }
+        if !words.isDisjoint(with: ["am", "pm", "at", "before", "after"]) && words.contains(where: { Int($0) != nil }) { return nil }
         if !words.isDisjoint(with: ["completed", "finished", "done"]) && !asksRemainingWork(text) { return nil }
         if normalized.contains("when can") || normalized.contains("when should") || normalized.hasPrefix("help ") || normalized.hasPrefix("plan ") { return nil }
         let explain = !words.isDisjoint(with: ["explain", "teach", "solve", "why", "hypothetical", "imagine"])
@@ -90,10 +90,12 @@ public enum WorkspaceFacts {
         let taskWords = !words.isDisjoint(with: ["task", "tasks", "assignment", "assignments", "homework", "deadline", "deadlines"])
         let priority = asksPriority(text) && (taskWords || !isSpecific(text) || asksRemainingWork(text))
         let workload = asksWorkload(text) && (taskWords || !words.isDisjoint(with: ["work", "left", "remaining", "workload"]))
-        let dated = !words.isDisjoint(with: ["today", "tomorrow", "overdue", "next"]) || wantsWeek || weekday != nil
+        let dated = !words.isDisjoint(with: ["today", "tonight", "tomorrow", "overdue", "next"]) || wantsWeek || weekday != nil
         if followingWorkspaceAnswer, (!StudyUnderstanding.topics(in: text).isEmpty || !words.isDisjoint(with: ["it", "that", "this", "one"])), !dated, !priority, !workload,
            let previous = previousScope.flatMap({ WorkspaceFactRequest(scope: $0) }) { return previous }
-        if calendarWords && !words.isDisjoint(with: ["today", "tomorrow"]) {
+        // Loosely worded calendar questions stay with the assistant; only plain day requests are exact.
+        if calendarWords && !words.isDisjoint(with: ["any", "anything", "there", "got", "soon", "supposed"]) { return nil }
+        if calendarWords && !words.isDisjoint(with: ["today", "tonight", "tomorrow"]) {
             return .calendar(words.contains("tomorrow") ? 1 : 0)
         }
         let taskQuestion = asksRemainingWork(text) || priority || workload || !words.isDisjoint(with: ["task", "tasks", "assignment", "assignments", "homework", "deadline", "deadlines", "due", "overdue"]) || (followingWorkspaceAnswer && !StudyUnderstanding.topics(in: text).isEmpty)
@@ -104,14 +106,14 @@ public enum WorkspaceFacts {
         if wantsWeek { return .tasksThisWeek }
         if let weekday { return .tasksOnWeekday(weekday) }
         if words.contains("tomorrow") { return .tasksTomorrow }
-        if words.contains("today") { return .tasksToday }
+        if words.contains("today") || words.contains("tonight") { return .tasksToday }
         if workload { return .workload }
         if priority { return .nextUp }
         if asksRemainingWork(text) || !words.isDisjoint(with: ["left", "remaining", "unfinished", "outstanding"]) { return .overview }
         if !words.isDisjoint(with: ["list", "show", "find", "which", "what", "when", "have", "about", "remind"]) || normalized.hasSuffix("tasks") || normalized.hasSuffix("task") { return .tasks(text) }
         return nil
     }
-    private static let generic = Set(StudyUnderstanding.tokens("what which when is are the my our i have do does due deadline deadlines task tasks assignment assignments homework show list find about a an on in for to today tomorrow overdue next upcoming calendar calender schedule agenda event events s how many unfinished active of please can could would you me tell need want right now all currently it that this one those them left remaining still outstanding remind needed needs be get should done work urgent first start with prioritize prioritise priority priorities important focus most week seven 7 days much long time take will total workload sunday monday tuesday wednesday thursday friday saturday"))
+    private static let generic = Set(StudyUnderstanding.tokens("what which when is are the my our i have do does due deadline deadlines task tasks assignment assignments homework show list find about a an on in for to today tomorrow overdue next upcoming calendar calender schedule agenda event events s how many unfinished active of please can could would you me tell need want right now all currently it that this one those them left remaining still outstanding remind needed needs be get should done work urgent first start with prioritize prioritise priority priorities important focus most week seven 7 days much long time take will total workload sunday monday tuesday wednesday thursday friday saturday any anything there got soon tonight am supposed"))
     public static func followupQuery(_ text: String, sources: [StudyChatSource]) -> String? {
         let words = Set(StudyUnderstanding.tokens(text))
         guard !words.isDisjoint(with: ["it", "that", "this", "one"]), StudyUnderstanding.topics(in: text).isEmpty else { return text }
@@ -143,7 +145,7 @@ public enum WorkspaceFacts {
         let days = abs(calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: due)).day ?? 0)
         let near = minutes < 60 ? "\(max(1, minutes)) min" : "\(minutes / 60) h"
         if due < now { return days == 0 ? near + " overdue" : "\(days) day\(days == 1 ? "" : "s") overdue" }
-        return days == 0 ? "in " + near : days == 1 ? "tomorrow" : "in \(days) days"
+        return days == 0 ? "in " + near : days == 1 ? (minutes < 360 ? "tomorrow, in " + near : "tomorrow") : "in \(days) days"
     }
     private enum DueGroup: Int, CaseIterable {
         case overdue, today, tomorrow, week, later

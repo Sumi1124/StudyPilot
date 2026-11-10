@@ -54,7 +54,7 @@ struct NotesView: View {
                             .contextMenu { Button("Delete note…", role: .destructive) { deleting = note } }
                     }
                 }.listStyle(.plain)
-                Text("\(filtered.count) notes · stored on this Mac").font(.caption).foregroundStyle(.tertiary)
+                Text("\(filtered.count) note\(filtered.count == 1 ? "" : "s") · stored on this Mac").font(.caption).foregroundStyle(.tertiary)
             }.padding(20).frame(minWidth: 230, idealWidth: 265, maxWidth: 320)
             Group {
                 if let note = notes.first(where: { $0.id == selectedID }) {
