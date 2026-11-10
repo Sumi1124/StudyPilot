@@ -1,5 +1,15 @@
 # In-app updates
 
+## Fixes and clearer labels (1.29.1)
+
+- Flashcard review no longer skips cards. Rating a card moved it out of the due list while the session was open, so a deck with several due cards could end early. A session now reviews every card that was due when it started.
+- The quick “New assignment” card refreshes its suggested deadline. A window left open overnight kept offering the previous evening, which created assignments that were already overdue. A deadline you pick yourself is kept.
+- AI chat answers more everyday phrasings directly from saved records: “Is anything overdue?”, “Anything due tomorrow?”, “Is there any homework due today?”, “What’s due tonight?” and “What am I supposed to do today?”. The word “am” is no longer mistaken for a clock time. Loosely worded calendar questions still go to the assistant.
+- A deadline shortly after midnight now reads “tomorrow, in 1 h” instead of only “tomorrow”.
+- Assignment rows show how far away each deadline is (“in 3 h”, “tomorrow”, “2 days overdue”).
+- Time totals on Today, the agenda and the IB overview read as “1 h 30 min” instead of “90 min”.
+- Counts use the singular where needed (“1 card”, “1 review”, “1 note”, “Updated 1 assignment”), and a bulk action that changes nothing says so.
+
 ## Smarter “What’s left?” answers (1.29.0)
 
 - “What tasks do I have left?” now returns a grouped overview: Overdue, Due today, Due tomorrow, Next 7 days and Later, with a total of the saved time estimates and a suggested starting point.

@@ -39,7 +39,7 @@ struct RevisionView: View {
                                 HStack { Image(systemName: "rectangle.on.rectangle.angled").font(.title2).foregroundStyle(Color.pilot); Spacer(); Text("\(due) due").font(.caption.bold()).foregroundStyle(Color.pilot) }
                                 Text(deck.title).font(.headline).foregroundStyle(.primary)
                                 SubjectBadge(subject: subjects.first { $0.id == deck.subjectID })
-                                Text("\(count) cards").font(.caption).foregroundStyle(.secondary)
+                                Text("\(count) card\(count == 1 ? "" : "s")").font(.caption).foregroundStyle(.secondary)
                             }.frame(maxWidth: .infinity, alignment: .leading).pilotCard()
                                 .overlay(RoundedRectangle(cornerRadius: 18).stroke(selectedID == deck.id ? Color.pilot : .clear, lineWidth: 2))
                         }.buttonStyle(.plain).contextMenu {
@@ -55,12 +55,12 @@ struct RevisionView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(selected.title).font(.title2.bold())
                             let accuracy = ReviewScheduler.accuracy(history.map(\.record))
-                            Text(accuracy.map { "\(Int(($0 * 100).rounded()))% recall · \(history.count) reviews" } ?? "Your first review is the start of your progress.").foregroundStyle(.secondary)
+                            Text(accuracy.map { "\(Int(($0 * 100).rounded()))% recall · \(history.count) review\(history.count == 1 ? "" : "s")" } ?? "Your first review is the start of your progress.").foregroundStyle(.secondary)
                         }
                         Spacer()
                         Button("Edit deck") { editDeck = selected }
                         Button("Add card", systemImage: "plus") { addCard = true }
-                        Button("Review \(due.count) cards", systemImage: "play.fill") { practice = true }.buttonStyle(.borderedProminent).disabled(due.isEmpty)
+                        Button("Review \(due.count) card\(due.count == 1 ? "" : "s")", systemImage: "play.fill") { practice = true }.buttonStyle(.borderedProminent).disabled(due.isEmpty)
                     }
                     if due.isEmpty, let next = deckCards.map(\.dueDate).min() { Text("Next review: \(next.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary) }
                     TextField("Search this deck", text: $search).textFieldStyle(.roundedBorder)
@@ -162,8 +162,11 @@ struct ReviewSessionView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var app
-    let cards: [Flashcard]
+    /// Captured once when the session opens. Rating a card moves its due date, so reading the live
+    /// due list here would shrink it mid-session and skip the cards that follow.
+    @State private var cards: [Flashcard]
     let title: String
+    init(cards: [Flashcard], title: String) { _cards = State(initialValue: cards); self.title = title }
     @State private var index = 0
     @State private var revealed = false
     @State private var correct = 0
@@ -196,7 +199,7 @@ struct ReviewSessionView: View {
                     }
                 } else { Button("Show answer") { revealed = true }.buttonStyle(.borderedProminent).controlSize(.large).keyboardShortcut(.space, modifiers: []) }
             } else {
-                EmptyState(symbol: "checkmark.seal", title: "A little stronger than before.", message: "You reviewed \(index) cards and recalled \(correct). Your next reviews are scheduled automatically; cards marked Again return in 10 minutes.")
+                EmptyState(symbol: "checkmark.seal", title: "A little stronger than before.", message: "You reviewed \(index) card\(index == 1 ? "" : "s") and recalled \(correct). Your next reviews are scheduled automatically; cards marked Again return in 10 minutes.")
                 Button("Done") { dismiss() }.buttonStyle(.borderedProminent)
             }
             if let error { Text(error).foregroundStyle(.red) }

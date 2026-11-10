@@ -162,7 +162,7 @@ struct WorkloadWeekView: View {
     private var days: [StudyWorkloadDay] { TodayWorkspace.workload(assignments: assignments, now: now) }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack { Text("Next 7 days").font(.system(size: 13, weight: .semibold)); Spacer(); Text("\(days.reduce(0) { $0 + $1.minutes }) min").font(.caption).foregroundStyle(.secondary) }
+            HStack { Text("Next 7 days").font(.system(size: 13, weight: .semibold)); Spacer(); Text(WorkspaceFacts.duration(days.reduce(0) { $0 + $1.minutes })).font(.caption).foregroundStyle(.secondary) }
             Text("Estimated effort by deadline").font(.caption).foregroundStyle(.secondary)
             HStack(alignment: .bottom, spacing: 6) {
                 ForEach(days) { day in
